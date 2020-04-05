@@ -1,7 +1,8 @@
 package org.sheedon.mqtt;
 
 /**
- * @Description: 断开的缓冲区选项
+ * 断开的缓冲区选项
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/14 21:12

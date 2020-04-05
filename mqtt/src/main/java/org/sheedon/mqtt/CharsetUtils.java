@@ -3,7 +3,8 @@ package org.sheedon.mqtt;
 import java.io.UnsupportedEncodingException;
 
 /**
- * @Description: 字符编码工具类
+ * 字符编码工具类
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/26 17:05
@@ -39,7 +40,7 @@ public class CharsetUtils {
             this.desc = desc;
         }
 
-        private Charset(String encode, String desc) {
+        Charset(String encode, String desc) {
             this.encode = encode;
             this.desc = desc;
 
@@ -51,7 +52,7 @@ public class CharsetUtils {
     /**
      * 获取传入字符串的编码格式
      */
-    public static String getEncode(String str) throws UnsupportedEncodingException {
+    private static String getEncode(String str) throws UnsupportedEncodingException {
         if (str != null && !str.isEmpty()) {
             for (Charset charset : Charset.values()) {
                 if (str.equals(new String(str.getBytes(charset.getEncode()), charset.getEncode()))) {
@@ -70,7 +71,7 @@ public class CharsetUtils {
      * @return
      * @throws UnsupportedEncodingException
      */
-    public static String changeCharset(String str, String newCharset)
+    static String changeCharset(String str, String newCharset)
             throws UnsupportedEncodingException {
         if (str != null) {
             //获取到原字符编码
@@ -91,7 +92,7 @@ public class CharsetUtils {
      * @param charset 转换格式
      * @return 结果
      */
-    public static String changeCharset(byte[] data, String charset) {
+    static String changeCharset(byte[] data, String charset) {
         if (data == null || data.length == 0)
             return null;
 

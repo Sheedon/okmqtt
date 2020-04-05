@@ -24,7 +24,7 @@ import java.util.concurrent.Executors;
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/11 12:46
  */
-public class Dispatcher {
+class Dispatcher {
 
     // 单线程池处理任务提交
     private final ExecutorService publishService = Executors.newSingleThreadExecutor();
@@ -46,15 +46,15 @@ public class Dispatcher {
     private TimeOutRunnable timeOut = new TimeOutRunnable(this, timeOutCalls);
 
     // 转化工厂
-    protected List<DataConverter.Factory> converterFactories;
+    private List<DataConverter.Factory> converterFactories;
 
-    protected Dispatcher() {
+    Dispatcher() {
     }
 
     /**
      * 设置转化工厂集合
      */
-    public void setConverterFactories(List<DataConverter.Factory> converterFactories) {
+    void setConverterFactories(List<DataConverter.Factory> converterFactories) {
         this.converterFactories = Collections.unmodifiableList(converterFactories);
     }
 
@@ -62,7 +62,7 @@ public class Dispatcher {
      * 核实转化为对应的反馈名
      * @param topic 主题
      */
-    public DataConverter<String, String> callbackNameConverter(String topic) {
+    DataConverter<String, String> callbackNameConverter(String topic) {
         return nextCallbackNameConverter(null, topic);
     }
 
@@ -102,12 +102,12 @@ public class Dispatcher {
      *
      * @param call 异步消息
      */
-    public synchronized void enqueue(Runnable call) {
+    synchronized void enqueue(Runnable call) {
         publishService.execute(call);
     }
 
 
-    protected synchronized void enqueueCallback(Runnable runnable) {
+    private synchronized void enqueueCallback(Runnable runnable) {
         callbackService.execute(runnable);
     }
 
@@ -145,7 +145,7 @@ public class Dispatcher {
      *
      * @param event 超时事件
      */
-    public synchronized void addLocalTimeOutCall(DelayEvent event) {
+    synchronized void addLocalTimeOutCall(DelayEvent event) {
 
         // 添加超时反馈集合数据，采用延迟队列
         timeOutCalls.add(event);
@@ -181,7 +181,7 @@ public class Dispatcher {
      *
      * @param id 请求UUID
      */
-    public synchronized void finishedByNet(String id, Response response) {
+    synchronized void finishedByNet(String id, Response response) {
 
         ReadyTask task = distributeTask(id);
         if (task == null)
@@ -204,7 +204,7 @@ public class Dispatcher {
      *
      * @param id 请求UUID
      */
-    public synchronized void finishedByLocal(String id, Throwable throwable) {
+    synchronized void finishedByLocal(String id, Throwable throwable) {
         ReadyTask task = distributeTask(id);
         if (task == null)
             return;
@@ -262,7 +262,7 @@ public class Dispatcher {
      * @param backName 反馈名称
      * @return uuid
      */
-    public String findNetByBackNameToFirst(String backName) {
+    String findNetByBackNameToFirst(String backName) {
         synchronized (dataCalls) {
             Deque<String> deque = dataCalls.get(backName);
             if (deque == null || deque.size() == 0)

@@ -43,21 +43,20 @@ public class MqttClient implements MqttCallbackExtendedListener {
     private void createClient() {
         // 创建MqttClient
 
-        String clientId = "yhkhs20181029046";
-        String serverUri = "tcp://yanhang.kmdns.net:3883";
+        String clientId = "";// 设置设备编号
+        String serverUri = "";// 设置服务器地址
 //        if (clientId == null || clientId.trim().equals(""))
 //            return;
 
         Queue<SubscribeBody> subscribeBodies = new ArrayDeque<>();
-        subscribeBodies.add(SubscribeBody.build("yh_classify/clouds/recyclable/cmd/yhkhs20181029046", 1));
-//        subscribeBodies.add(SubscribeBody.build("yh_classify/device/recyclable/data/yhkhs20181029046", 1));
+        subscribeBodies.add(SubscribeBody.build("", 1));// 添加需要订阅主题
 
 
         if (mClient == null) {
             mClient = new OkMqttClient.Builder()
                     .clientInfo(App.getInstance(), serverUri, clientId)
                     .subscribeBodies(subscribeBodies)
-                    .baseTopic("yh_classify/device/recyclable/data/yhkhs20181029046")
+                    .baseTopic("")// 添加基础主题
                     .addConverterFactory(CallbackRuleConverterFactory.create())
                     .callback(this).build();
         }
@@ -107,7 +106,7 @@ public class MqttClient implements MqttCallbackExtendedListener {
     }
 
     @Override
-    public void messageArrived(String topic, MqttMessage message) throws Exception {
+    public void messageArrived(String topic, MqttMessage message) {
 
     }
 

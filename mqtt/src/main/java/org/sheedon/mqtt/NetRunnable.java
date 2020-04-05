@@ -6,7 +6,8 @@ import java.io.UnsupportedEncodingException;
 
 
 /**
- * @Description: 网络反馈Runnable处理
+ * 网络反馈Runnable处理
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/14 23:08
@@ -14,13 +15,13 @@ import java.io.UnsupportedEncodingException;
 public class NetRunnable extends NamedRunnable {
 
     // 调度器
-    final Dispatcher dispatcher;
+    private final Dispatcher dispatcher;
     // 主题
-    final String topic;
+    private final String topic;
     // 内容
-    final MqttMessage message;
+    private final MqttMessage message;
 
-    final String charsetName;
+    private final String charsetName;
 
     NetRunnable(Dispatcher dispatcher, String topic, MqttMessage message, String charsetName) {
         super("NetRunnable");

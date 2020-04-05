@@ -6,7 +6,8 @@ import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 /**
- * @Description: mqtt信息反馈接口
+ * mqtt信息反馈接口
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/14 10:52

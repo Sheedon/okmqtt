@@ -1,7 +1,8 @@
 package org.sheedon.mqtt;
 
 /**
- * @Description: 请求任务类
+ * 请求任务类
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/13 12:51

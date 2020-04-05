@@ -2,6 +2,7 @@ package org.sheedon.mqtt;
 
 /**
  * 调度封装的基本接口
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/11 12:46

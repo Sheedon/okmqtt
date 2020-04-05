@@ -3,7 +3,8 @@ package org.sheedon.mqtt;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 /**
- * @Description: java类作用描述
+ * 反馈内容
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/26 16:31

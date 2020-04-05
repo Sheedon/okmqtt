@@ -43,7 +43,7 @@ public class DelayEvent implements Delayed {
         return unit.convert(diff, TimeUnit.MILLISECONDS);
     }
 
-    public String getId() {
+    String getId() {
         return id;
     }
 }

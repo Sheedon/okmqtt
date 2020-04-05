@@ -1,17 +1,18 @@
 package org.sheedon.mqtt;
 
 /**
- * @Description: mqtt连接选项配置类
+ * mqtt连接选项配置类
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/14 12:37
  */
-public class MqttConnectOptions extends org.eclipse.paho.client.mqttv3.MqttConnectOptions {
+class MqttConnectOptions extends org.eclipse.paho.client.mqttv3.MqttConnectOptions {
 
     private static MqttConnectOptions theOptions;
 
     // 设置基础值
-    protected MqttConnectOptions() {
+    private MqttConnectOptions() {
         // 在线间隔30秒
         setKeepAliveInterval(30);
         // 连接超时10秒
@@ -30,7 +31,7 @@ public class MqttConnectOptions extends org.eclipse.paho.client.mqttv3.MqttConne
      *
      * @return MqttConnectOptions
      */
-    public static MqttConnectOptions getDefault() {
+    static MqttConnectOptions getDefault() {
         synchronized (MqttConnectOptions.class) {
             if (theOptions == null) {
                 theOptions = new MqttConnectOptions();
@@ -44,7 +45,7 @@ public class MqttConnectOptions extends org.eclipse.paho.client.mqttv3.MqttConne
      *
      * @param options 配置类
      */
-    public static void setDefault(MqttConnectOptions options) {
+    static void setDefault(MqttConnectOptions options) {
         synchronized (MqttConnectOptions.class) {
             theOptions = options;
         }

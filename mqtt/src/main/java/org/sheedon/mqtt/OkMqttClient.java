@@ -29,39 +29,39 @@ public class OkMqttClient implements RealClient, Call.Factory{
     private static final String TAG = "OK_MQTT_CLIENT";
 
     // 调度器
-    Dispatcher dispatcher;
+    private Dispatcher dispatcher;
     // 超时毫秒
-    long timeOutMilliSecond;
+    private long timeOutMilliSecond;
     // mqttAndroid客户端
-    MqttAndroidClient mqttClient;
+    private MqttAndroidClient mqttClient;
 
     // 反馈监听器
-    MqttCallbackExtendedListener listener;
+    private MqttCallbackExtendedListener listener;
 
     // 连接选项配置类
-    MqttConnectOptions connectOptions;
+    private MqttConnectOptions connectOptions;
     // 断开连接缓存选项配置类
-    DisconnectedBufferOptions disconnectedOptions;
+    private DisconnectedBufferOptions disconnectedOptions;
 
     // 主题订阅数据
-    Queue<SubscribeBody> subscribeBodies;
+    private Queue<SubscribeBody> subscribeBodies;
 
     // 基础主题
-    String baseTopic;
+    private String baseTopic;
     // 编码名称
-    String charsetName;
+    private String charsetName;
 
     // 是否自动订阅主题
-    boolean isAutoSubscribeToTopic;
+    private boolean isAutoSubscribeToTopic;
 
     // 是否开始连接
-    boolean isStartConnect;
+    private boolean isStartConnect;
 
     public OkMqttClient() {
         this(new Builder());
     }
 
-    OkMqttClient(Builder builder) {
+    private OkMqttClient(Builder builder) {
         this.dispatcher = builder.dispatcher;
         this.timeOutMilliSecond = builder.messageTimeout * 1000;
         this.charsetName = builder.charsetName;
@@ -128,7 +128,7 @@ public class OkMqttClient implements RealClient, Call.Factory{
     /**
      * 基础主题
      */
-    public String baseTopic() {
+    String baseTopic() {
         return baseTopic;
     }
 

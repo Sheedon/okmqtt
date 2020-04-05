@@ -32,9 +32,8 @@ public class RealCall implements Call {
      */
     static RealCall newRealCall(OkMqttClient client, Request originalRequest) {
         // Safely publish the Call instance to the EventListener.
-        RealCall call = new RealCall(client, originalRequest);
-//        call.eventListener = client.eventListenerFactory().create(call);
-        return call;
+        //        call.eventListener = client.eventListenerFactory().create(call);
+        return new RealCall(client, originalRequest);
     }
 
     @Override

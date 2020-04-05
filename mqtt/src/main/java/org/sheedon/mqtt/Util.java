@@ -5,7 +5,8 @@ import androidx.annotation.Nullable;
 import java.util.Locale;
 
 /**
- * @Description: java类作用描述
+ * 基本工具类
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/11 21:00
