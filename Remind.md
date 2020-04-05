@@ -52,7 +52,7 @@ Add it in your root build.gradle at the end of repositories:
 
 ### Create
 
-```java
+```
 OkMqttClient mClient = new OkMqttClient.Builder()
         .clientInfo(App.getInstance(), serverUri, clientId)// 上下文，mqtt地址，客户端id 
         .subscribeBodies(subscribeBodies)// 订阅主题
