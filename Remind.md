@@ -19,7 +19,7 @@ Add it in your root build.gradle at the end of repositories:
 
 ```
 	dependencies {
-	        implementation 'com.github.Sheedon:MqttDispatcher:Tag'
+	        implementation 'com.github.Sheedon:MqttDispatcher:v1.0.0'
 	}
 ```
 
@@ -44,7 +44,7 @@ Add it in your root build.gradle at the end of repositories:
 	<dependency>
 	    <groupId>com.github.Sheedon</groupId>
 	    <artifactId>MqttDispatcher</artifactId>
-	    <version>Tag</version>
+	    <version>v1.0.0</version>
 	</dependency>
 ```
 
