@@ -42,6 +42,9 @@ class Dispatcher {
     // 数据反馈处理集合
     private final Map<String, Deque<String>> dataCalls = new LinkedHashMap<>();
 
+    // 额外反馈集合
+    private final Map<String, Callback> callbacks = new ConcurrentHashMap<>();
+
     // 超时处理
     private TimeOutRunnable timeOut = new TimeOutRunnable(this, timeOutCalls);
 
@@ -104,6 +107,14 @@ class Dispatcher {
      */
     synchronized void enqueue(Runnable call) {
         publishService.execute(call);
+    }
+
+    public void addCallback(String backName, Callback callback) {
+        callbacks.put(backName, callback);
+    }
+
+    public void removeCallback(String backName) {
+        callbacks.remove(backName);
     }
 
 
@@ -181,7 +192,9 @@ class Dispatcher {
      *
      * @param id 请求UUID
      */
-    synchronized void finishedByNet(String id, Response response) {
+    synchronized void finishedByNet(String id, String backName, Response response) {
+
+        noticeCallback(backName, response);
 
         ReadyTask task = distributeTask(id);
         if (task == null)
@@ -196,6 +209,24 @@ class Dispatcher {
         // 移除Call
         removeCall(task);
 
+    }
+
+    /**
+     * 反馈通知
+     *
+     * @param backName 反馈名
+     * @param response 反馈结果
+     */
+    private void noticeCallback(String backName, Response response) {
+        if (backName == null)
+            return;
+
+        Callback callback = callbacks.get(backName);
+
+        if (callback == null)
+            return;
+
+        callback.onResponse(response);
     }
 
     /**

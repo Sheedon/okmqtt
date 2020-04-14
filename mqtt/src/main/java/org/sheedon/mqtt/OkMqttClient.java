@@ -25,7 +25,7 @@ import static org.sheedon.mqtt.Util.checkNotNull;
  * @Email: sheedonsun@163.com
  * @Date: 2020/4/5 16:55
  */
-public class OkMqttClient implements RealClient, Call.Factory{
+public class OkMqttClient implements RealClient, MQTTFactory{
     private static final String TAG = "OK_MQTT_CLIENT";
 
     // 调度器
@@ -245,6 +245,17 @@ public class OkMqttClient implements RealClient, Call.Factory{
     @Override
     public Call newCall(Request request) {
         return RealCall.newRealCall(this, request);
+    }
+
+    /**
+     * 创建观察者
+     *
+     * @param request 请求数据
+     * @return Observable
+     */
+    @Override
+    public Observable newObservable(Request request) {
+        return RealObservable.newRealObservable(this, request);
     }
 
 
