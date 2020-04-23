@@ -25,8 +25,8 @@ public class DelayEvent implements Delayed {
 
     @Override
     public int compareTo(Delayed o) {
-        long result = this.getDelay(TimeUnit.NANOSECONDS)
-                - o.getDelay(TimeUnit.NANOSECONDS);
+        long result = this.getDelay(TimeUnit.MILLISECONDS)
+                - o.getDelay(TimeUnit.MILLISECONDS);
         if (result < 0) {
             return -1;
         } else if (result > 0) {
@@ -41,6 +41,10 @@ public class DelayEvent implements Delayed {
         Date now = new Date();
         long diff = timeOutDate.getTime() - now.getTime();
         return unit.convert(diff, TimeUnit.MILLISECONDS);
+    }
+
+    public long getDelay(){
+        return timeOutDate.getTime() - System.currentTimeMillis();
     }
 
     String getId() {

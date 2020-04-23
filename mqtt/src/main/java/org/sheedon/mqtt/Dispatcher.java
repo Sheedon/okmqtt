@@ -36,9 +36,6 @@ class Dispatcher {
     // 发送需要反馈的请求集合
     private final Map<String, ReadyTask> readyCalls = new ConcurrentHashMap<>();
 
-    // 超时处理集合
-    private final DelayQueue<DelayEvent> timeOutCalls = new DelayQueue<>();
-
     // 数据反馈处理集合
     private final Map<String, Deque<String>> dataCalls = new LinkedHashMap<>();
 
@@ -46,7 +43,7 @@ class Dispatcher {
     private final Map<String, Callback> callbacks = new ConcurrentHashMap<>();
 
     // 超时处理
-    private TimeOutRunnable timeOut = new TimeOutRunnable(this, timeOutCalls);
+    private TimeOutRunnable timeOut = new TimeOutRunnable(this);
 
     // 转化工厂
     private List<DataConverter.Factory> converterFactories;
@@ -159,7 +156,7 @@ class Dispatcher {
     synchronized void addLocalTimeOutCall(DelayEvent event) {
 
         // 添加超时反馈集合数据，采用延迟队列
-        timeOutCalls.add(event);
+        timeOut.addEvent(event);
         // 若运行状态则会依次执行延迟队列
         // 未运行，线程执行
         if (timeOut.isRunning())
@@ -196,6 +193,10 @@ class Dispatcher {
 
         noticeCallback(backName, response);
 
+        if (id == null) {
+            return;
+        }
+
         ReadyTask task = distributeTask(id);
         if (task == null)
             return;
@@ -208,6 +209,10 @@ class Dispatcher {
 
         // 移除Call
         removeCall(task);
+
+        // 移除本地超时任务
+        if (task.getEvent() != null)
+            timeOut.removeEvent(task.getEvent());
 
     }
 
@@ -277,13 +282,7 @@ class Dispatcher {
         if (deque != null && deque.size() > 0)
             deque.remove(task.getId());
 
-        // 移除本地超时任务
-        if (task.getEvent() != null)
-            timeOutCalls.remove(task.getEvent());
-
         readyCalls.remove(task.getId());
-
-
     }
 
 
