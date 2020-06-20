@@ -46,7 +46,7 @@ public class TimeOutRunnable extends NamedRunnable {
             DelayEvent delayEvent = queue.poll();
             if (delayEvent != null && delayEvent.getId() != null
                     && !delayEvent.getId().equals("")) {
-                dispatcher.finishedByLocal(delayEvent.getId(), new TimeoutException("串口超时"));
+                dispatcher.finishedByLocal(delayEvent.getId(), new TimeoutException("网络超时"));
             }
         } while (queue.size() > 0);
 
