@@ -7,10 +7,10 @@ import java.util.UUID;
 
 /**
  * 真实反馈类
- *  * 异步执行数据请求
- *  * 1. 获取是否需要反馈，有反馈监听才需要添加反馈
- *  * 2. 无需反馈，直接发送完成
- *  * 3. 需要反馈，添加任务队列Map<name,listener>
+ * * 异步执行数据请求
+ * * 1. 获取是否需要反馈，有反馈监听才需要添加反馈
+ * * 2. 无需反馈，直接发送完成
+ * * 3. 需要反馈，添加任务队列Map<name,listener>
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -27,6 +27,7 @@ public class RealCall implements Call {
         this.client = client;
         this.originalRequest = originalRequest;
     }
+
     /**
      * 新增反馈类
      */
@@ -86,7 +87,7 @@ public class RealCall implements Call {
         return null;
     }
 
-    final class AsyncCall extends NamedRunnable implements AsyncCallImpl{
+    final class AsyncCall extends NamedRunnable implements AsyncCallImpl {
 
         private final Callback responseCallback;
         private final RealClient client;
@@ -153,6 +154,11 @@ public class RealCall implements Call {
                 String topic = request.topic();
                 if (topic == null || topic.isEmpty())
                     topic = mqttClient.baseTopic();
+
+                if (mqttClient == null || mqttClient.mqttClient() == null) {
+                    client.dispatcher().finishedByLocal(id(), new Throwable("mqtt client is null"));
+                    return;
+                }
                 mqttClient.mqttClient().publish(topic,
                         request.getBody());
 
