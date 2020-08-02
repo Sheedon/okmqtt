@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import static org.sheedon.mqtt.Util.checkNotNull;
 
@@ -25,7 +26,7 @@ import static org.sheedon.mqtt.Util.checkNotNull;
  * @Email: sheedonsun@163.com
  * @Date: 2020/4/5 16:55
  */
-public class OkMqttClient implements RealClient, MQTTFactory{
+public class OkMqttClient implements RealClient, MQTTFactory {
     private static final String TAG = "OK_MQTT_CLIENT";
 
     // 调度器
@@ -235,6 +236,18 @@ public class OkMqttClient implements RealClient, MQTTFactory{
 
     }
 
+    public Queue<SubscribeBody> getSubscribeBodies() {
+        return new LinkedBlockingDeque<>(subscribeBodies);
+    }
+
+    public void updateSubscribeBodies(Queue<SubscribeBody> queue) {
+        if (subscribeBodies != null) {
+            subscribeBodies.clear();
+            subscribeBodies.addAll(queue);
+
+            subscribeToTopic(true);
+        }
+    }
 
     /**
      * 创建Call
