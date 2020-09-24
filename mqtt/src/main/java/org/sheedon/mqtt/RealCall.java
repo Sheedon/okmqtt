@@ -166,7 +166,7 @@ public class RealCall implements Call {
                     client.dispatcher().addLocalTimeOutCall(delayEvent);
                 }
 
-            } catch (MqttException e) {
+            } catch (MqttException | NullPointerException e) {
                 e.printStackTrace();
                 client.dispatcher().finishedByLocal(id(), e);
 
