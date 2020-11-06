@@ -98,10 +98,30 @@ public class OkMqttClient implements RealClient, MQTTFactory {
         if (!mqttClient.isConnected() && !isStartConnect) {
             try {
                 isStartConnect = true;
-                mqttClient.connect(connectOptions, null, listener);
+                mqttClient.connect(connectOptions, null, mCreateCallback);
             } catch (MqttException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private long lastTime = 0;
+
+    public void reConnect() {
+        long nowTime = System.currentTimeMillis();
+        if (nowTime - lastTime < 5000) {
+            isStartConnect = false;
+            if (listener != null)
+                listener.onFailure(null, new Throwable("Only reconnect once within 5 seconds"));
+            return;
+        }
+
+        lastTime = nowTime;
+        try {
+            connect();
+        } catch (Exception e) {
+            if (listener != null)
+                listener.onFailure(null, e);
         }
     }
 
