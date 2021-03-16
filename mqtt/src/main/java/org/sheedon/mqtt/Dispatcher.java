@@ -42,7 +42,7 @@ class Dispatcher {
     private final Map<String, Callback> callbacks = new ConcurrentHashMap<>();
 
     // 超时处理
-    private TimeOutRunnable timeOut = new TimeOutRunnable(this);
+    private final TimeOutRunnable timeOut = new TimeOutRunnable(this);
 
     // 转化工厂
     private List<DataConverter.Factory> converterFactories;

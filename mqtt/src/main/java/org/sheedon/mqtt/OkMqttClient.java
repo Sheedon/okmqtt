@@ -30,30 +30,30 @@ public class OkMqttClient implements RealClient, MQTTFactory {
     private static final String TAG = "OK_MQTT_CLIENT";
 
     // 调度器
-    private Dispatcher dispatcher;
+    private final Dispatcher dispatcher;
     // 超时毫秒
-    private long timeOutMilliSecond;
+    private final long timeOutMilliSecond;
     // mqttAndroid客户端
-    private MqttAndroidClient mqttClient;
+    private final MqttAndroidClient mqttClient;
 
     // 反馈监听器
-    private MqttCallbackExtendedListener listener;
+    private final MqttCallbackExtendedListener listener;
 
     // 连接选项配置类
-    private MqttConnectOptions connectOptions;
+    private final MqttConnectOptions connectOptions;
     // 断开连接缓存选项配置类
-    private DisconnectedBufferOptions disconnectedOptions;
+    private final DisconnectedBufferOptions disconnectedOptions;
 
     // 主题订阅数据
-    private Queue<SubscribeBody> subscribeBodies;
+    private final Queue<SubscribeBody> subscribeBodies;
 
     // 基础主题
-    private String baseTopic;
+    private final String baseTopic;
     // 编码名称
-    private String charsetName;
+    private final String charsetName;
 
     // 是否自动订阅主题
-    private boolean isAutoSubscribeToTopic;
+    private final boolean isAutoSubscribeToTopic;
 
     // 是否开始连接
     private boolean isStartConnect;
@@ -156,7 +156,7 @@ public class OkMqttClient implements RealClient, MQTTFactory {
     /**
      * mqtt连接监听
      */
-    private MqttCallbackExtendedListener mCreateCallback = new MqttCallbackExtendedListener() {
+    private final MqttCallbackExtendedListener mCreateCallback = new MqttCallbackExtendedListener() {
 
         /**
          * 连接成功

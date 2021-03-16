@@ -20,8 +20,8 @@ public class TimeOutRunnable extends NamedRunnable {
 
     private final Object lock = new Object();
 
-    private AtomicBoolean running = new AtomicBoolean(false);
-    private AtomicBoolean wait = new AtomicBoolean(false);
+    private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean wait = new AtomicBoolean(false);
 
     TimeOutRunnable(Dispatcher dispatcher) {
         super("TimeOutRunnable");

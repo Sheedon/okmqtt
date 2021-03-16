@@ -156,6 +156,7 @@ public class RealCall implements Call {
                     topic = mqttClient.baseTopic();
 
                 if (mqttClient == null || mqttClient.mqttClient() == null) {
+                    assert client != null;
                     client.dispatcher().finishedByLocal(id(), new Throwable("mqtt client is null"));
                     return;
                 }
