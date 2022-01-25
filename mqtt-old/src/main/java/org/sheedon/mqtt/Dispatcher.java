@@ -28,7 +28,8 @@ class Dispatcher {
     // 单线程池处理任务提交
     private final ExecutorService publishService = Executors.newSingleThreadExecutor();
     // 单线程池处理超时操作
-    private final ExecutorService timeOutService = Executors.newSingleThreadExecutor();
+//    @Deprecated
+//    private final ExecutorService timeOutService = Executors.newSingleThreadExecutor();
     // 反馈数据，可能是高并发，使用缓存线程池
     private final ExecutorService callbackService = Executors.newCachedThreadPool();
 
@@ -42,7 +43,9 @@ class Dispatcher {
     private final Map<String, Callback> callbacks = new ConcurrentHashMap<>();
 
     // 超时处理
-    private final TimeOutRunnable timeOut = new TimeOutRunnable(this);
+//    @Deprecated
+//    private final TimeOutRunnable timeOut = new TimeOutRunnable(this);
+    private final TimeOutHandler timeOut = new TimeOutHandler(this);
 
     // 转化工厂
     private List<DataConverter.Factory> converterFactories;
@@ -156,12 +159,12 @@ class Dispatcher {
 
         // 添加超时反馈集合数据，采用延迟队列
         timeOut.addEvent(event);
-        // 若运行状态则会依次执行延迟队列
-        // 未运行，线程执行
-        if (timeOut.isRunning())
-            return;
-
-        timeOutService.execute(timeOut);
+//        // 若运行状态则会依次执行延迟队列
+//        // 未运行，线程执行
+//        if (timeOut.isRunning())
+//            return;
+//
+//        timeOutService.execute(timeOut);
     }
 
     /**

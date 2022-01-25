@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @Email: sheedonsun@163.com
  * @Date: 2020/2/13 16:25
  */
+@Deprecated
 public class TimeOutRunnable extends NamedRunnable {
 
     // 延迟队列

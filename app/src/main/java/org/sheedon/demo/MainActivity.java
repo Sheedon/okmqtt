@@ -16,6 +16,9 @@ import org.sheedon.mqtt.Request;
 import org.sheedon.mqtt.RequestBuilder;
 import org.sheedon.mqtt.Response;
 import org.sheedon.mqtt.ResponseBody;
+import org.sheedon.mqtt.SubscribeBody;
+
+import java.util.Queue;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -40,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onResponse(Response response) {
                 ResponseBody body = response.body();
-                System.out.println(body == null?"":body.getBody());
+                System.out.println(body == null ? "" : body.getBody());
                 observable.cancel();
             }
         });
@@ -48,6 +51,15 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+//                Queue<SubscribeBody> subscribeBodies = MqttClient.getInstance().getClient().getSubscribeBodies();
+//
+//                SubscribeBody body = SubscribeBody.build("test", 1);
+//
+//                subscribeBodies.add(body);
+//
+//                MqttClient.getInstance().getClient().updateSubscribeBodies(subscribeBodies);
+
                 JSONObject jsonObject = new JSONObject();
                 try {
                     jsonObject.put("type", "get_manager_list");
@@ -55,37 +67,37 @@ public class MainActivity extends AppCompatActivity {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-
-                Request request = new RequestBuilder()
-                        .payload(jsonObject.toString())
-                        .backName("get_manager_list")
-                        .build();
-
-                Call call = client.newCall(request);
-                call.enqueue(new Callback<Response>() {
-                    @Override
-                    public void onFailure(Throwable e) {
-
-                    }
-
-                    @Override
-                    public void onResponse(Response response) {
-
-                    }
-                });
-
-//                MqttClient.getInstance().publish(jsonObject.toString(), "get_manager_list", new Callback() {
+//
+//                Request request = new RequestBuilder()
+//                        .payload(jsonObject.toString())
+//                        .backName("get_manager_list")
+//                        .build();
+//
+//                Call call = client.newCall(request);
+//                call.enqueue(new Callback<Response>() {
 //                    @Override
 //                    public void onFailure(Throwable e) {
-//                        System.out.println(e.getMessage());
+//
 //                    }
 //
 //                    @Override
 //                    public void onResponse(Response response) {
-//                        ResponseBody body = response.body();
-//                        System.out.println(body == null?"":body.getBody());
+//
 //                    }
 //                });
+
+                MqttClient.getInstance().publish(jsonObject.toString(), "get_manager_list", new Callback() {
+                    @Override
+                    public void onFailure(Throwable e) {
+                        System.out.println(e.getMessage());
+                    }
+
+                    @Override
+                    public void onResponse(Response response) {
+                        ResponseBody body = response.body();
+                        System.out.println(body == null?"":body.getBody());
+                    }
+                });
             }
         });
     }

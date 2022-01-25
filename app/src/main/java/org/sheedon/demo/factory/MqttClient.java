@@ -1,5 +1,7 @@
 package org.sheedon.demo.factory;
 
+import android.util.Log;
+
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -14,6 +16,7 @@ import org.sheedon.mqtt.RequestBuilder;
 import org.sheedon.mqtt.Response;
 import org.sheedon.mqtt.SubscribeBody;
 
+import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -43,12 +46,13 @@ public class MqttClient implements MqttCallbackExtendedListener {
     private void createClient() {
         // 创建MqttClient
 
-        String clientId = "yhkhs20181029046";// 设置设备编号
-        String serverUri = "tcp://yanhang.kmdns.net:3883";// 设置服务器地址
+        String clientId = "yhkhs2018102904611";// 设置设备编号
+        String serverUri = "tcp://mqtt.yanhangtec.com";// 设置服务器地址
 //        if (clientId == null || clientId.trim().equals(""))
 //            return;
 
         Queue<SubscribeBody> subscribeBodies = new ArrayDeque<>();
+        subscribeBodies.add(SubscribeBody.build("yh_classify/clouds/garbage/cmd/LJTF2020072001", 1));// 添加需要订阅主题
         subscribeBodies.add(SubscribeBody.build("yh_classify/clouds/recyclable/cmd/yhkhs20181029046", 1));// 添加需要订阅主题
 
 
@@ -107,7 +111,11 @@ public class MqttClient implements MqttCallbackExtendedListener {
 
     @Override
     public void messageArrived(String topic, MqttMessage message) {
-
+        try {
+            Log.v("SXD", "messageArrived: " + topic + " : " + new String(message.getPayload(), "GBK"));
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -117,7 +125,7 @@ public class MqttClient implements MqttCallbackExtendedListener {
 
     @Override
     public void messageArrived(String topic, String data) {
-
+        Log.v("SXD","topic:"+topic);
     }
 
     @Override
@@ -127,6 +135,6 @@ public class MqttClient implements MqttCallbackExtendedListener {
 
     @Override
     public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-
+        mClient.reConnect();
     }
 }

@@ -1,2 +1,3 @@
-include ':app', ':mqtt'
+include ':app', ':mqtt-old'
 rootProject.name='MqttDispatcher'
+include ':mqtt'
