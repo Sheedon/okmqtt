@@ -1,5 +1,7 @@
 package org.sheedon.mqtt;
 
+import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
+
 /**
  * 断开的缓冲区选项
  *
@@ -7,12 +9,12 @@ package org.sheedon.mqtt;
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/26 4:46 下午
  */
-public class DisconnectedBufferOptions extends org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions {
+public class DefaultDisconnectedBufferOptions extends DisconnectedBufferOptions {
 
-    private static DisconnectedBufferOptions theOptions;
+    private static DefaultDisconnectedBufferOptions theOptions;
 
     // 设置基础值
-    private DisconnectedBufferOptions() {
+    private DefaultDisconnectedBufferOptions() {
 
         // 设置缓冲区启用
         setBufferEnabled(true);
@@ -30,10 +32,10 @@ public class DisconnectedBufferOptions extends org.eclipse.paho.client.mqttv3.Di
      *
      * @return DisconnectedBufferOptions
      */
-    static DisconnectedBufferOptions getDefault() {
-        synchronized (DisconnectedBufferOptions.class) {
+    static DefaultDisconnectedBufferOptions getDefault() {
+        synchronized (DefaultDisconnectedBufferOptions.class) {
             if (theOptions == null) {
-                theOptions = new DisconnectedBufferOptions();
+                theOptions = new DefaultDisconnectedBufferOptions();
             }
         }
         return theOptions;
@@ -44,8 +46,8 @@ public class DisconnectedBufferOptions extends org.eclipse.paho.client.mqttv3.Di
      *
      * @param options 选项
      */
-    static void setDefault(DisconnectedBufferOptions options) {
-        synchronized (DisconnectedBufferOptions.class) {
+    static void setDefault(DefaultDisconnectedBufferOptions options) {
+        synchronized (DefaultDisconnectedBufferOptions.class) {
             theOptions = options;
         }
     }

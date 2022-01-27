@@ -7,11 +7,11 @@ package org.sheedon.mqtt;
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/26 4:42 下午
  */
-final class MqttConnectOptions extends org.eclipse.paho.client.mqttv3.MqttConnectOptions{
-    private static MqttConnectOptions theOptions;
+final class DefaultMqttConnectOptions extends org.eclipse.paho.client.mqttv3.MqttConnectOptions{
+    private static DefaultMqttConnectOptions theOptions;
 
     // 设置基础值
-    private MqttConnectOptions() {
+    private DefaultMqttConnectOptions() {
         // 在线间隔30秒
         setKeepAliveInterval(30);
         // 连接超时10秒
@@ -29,10 +29,10 @@ final class MqttConnectOptions extends org.eclipse.paho.client.mqttv3.MqttConnec
      *
      * @return MqttConnectOptions
      */
-    static MqttConnectOptions getDefault() {
-        synchronized (MqttConnectOptions.class) {
+    static DefaultMqttConnectOptions getDefault() {
+        synchronized (DefaultMqttConnectOptions.class) {
             if (theOptions == null) {
-                theOptions = new MqttConnectOptions();
+                theOptions = new DefaultMqttConnectOptions();
             }
         }
         return theOptions;
@@ -43,8 +43,8 @@ final class MqttConnectOptions extends org.eclipse.paho.client.mqttv3.MqttConnec
      *
      * @param options 配置类
      */
-    static void setDefault(MqttConnectOptions options) {
-        synchronized (MqttConnectOptions.class) {
+    static void setDefault(DefaultMqttConnectOptions options) {
+        synchronized (DefaultMqttConnectOptions.class) {
             theOptions = options;
         }
     }
