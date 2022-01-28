@@ -4,15 +4,19 @@ import android.content.Context;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttClientPersistence;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
-import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.UUID;
 
 /**
@@ -30,16 +34,16 @@ public class MqttWrapperClient {
     // mqttAndroid客户端
     private final MqttAndroidClient mqttClient;
 
-    // 连接选项配置类
-    private final MqttConnectOptions connectOptions;
-    // 断开连接缓存选项配置类
-    private final DisconnectedBufferOptions disconnectedOptions;
-
+    // 连接配置选项
+    private MqttConnectOptions connectOptions;
     // 主题订阅数据
-    private final Queue<SubscribeBody> subscribeBodies;
+    private final List<SubscribeBody> subscribeBodies = new ArrayList<>();
+    // 订阅情况监听器
+    private IMqttActionListener subscribeListener;
 
-    // 是否自动订阅主题
-    private final boolean isAutoSubscribeToTopic;
+    // mqtt 反馈监听器
+    // TODO 修改
+    private MqttCallback callback;
 
     // 是否开始连接
     private boolean isStartConnect;
@@ -51,17 +55,11 @@ public class MqttWrapperClient {
     }
 
     private MqttWrapperClient(Builder builder) {
+        this.mqttClient = builder.androidClient;
         this.connectOptions = builder.connectOptions;
-        this.disconnectedOptions = builder.disconnectedOptions;
-        this.subscribeBodies = builder.subscribeBodies;
-        this.isAutoSubscribeToTopic = builder.isAutoSubscribeToTopic;
-
-        Context context = Objects.requireNonNull(builder.context, "The current context is empty," +
-                " please set the context");
-        String serverUri = Objects.requireNonNull(builder.serverURI, "The current serverURI is empty," +
-                " please set the serverURI");
-        String clientId = builder.clientId == null || builder.clientId.isEmpty() ? UUID.randomUUID().toString() : builder.clientId;
-        mqttClient = new MqttAndroidClient(context, serverUri, clientId);
+        this.subscribeBodies.addAll(Arrays.asList(builder.subscribeBodies));
+        this.subscribeListener = builder.subscribeListener;
+        this.callback = builder.callback;
 
         // TODO
 //        mqttClient.setCallback(mCreateCallback);
@@ -140,26 +138,60 @@ public class MqttWrapperClient {
     };
 
     public static final class Builder {
-        Context context;
-        String serverURI;
-        String clientId;
+        // mqtt的Android客户端
+        private MqttAndroidClient androidClient;
+        // 上下文，用于创建MqttAndroidClient
+        private Context context;
+        // 服务地址
+        private String serverURI;
+        // 设备ID
+        private String clientId;
+        // Mqtt 客户端持久化
+        private MqttClientPersistence persistence;
+        // Ack 反馈处理类型
+        private MqttAndroidClient.Ack ackType;
 
-        MqttConnectOptions connectOptions;
-        DisconnectedBufferOptions disconnectedOptions;
+        // 连接配置选项
+        private MqttConnectOptions connectOptions;
+        // 断开连接缓冲选项
+        private DisconnectedBufferOptions bufferOpts;
 
-        Queue<SubscribeBody> subscribeBodies;
-        boolean isAutoSubscribeToTopic;
+        // 订阅信息
+        private SubscribeBody[] subscribeBodies = new SubscribeBody[0];
+        // 订阅情况监听器
+        private IMqttActionListener subscribeListener;
+
+        // mqtt 反馈监听器
+        // TODO 修改
+        private MqttCallback callback;
 
 //        final List<DataConverter.Factory> converterFactories = new ArrayList<>();
 
         public Builder() {
-            isAutoSubscribeToTopic = true;
             connectOptions = DefaultMqttConnectOptions.getDefault();
-            disconnectedOptions = DefaultDisconnectedBufferOptions.getDefault();
+            bufferOpts = DefaultDisconnectedBufferOptions.getDefault();
         }
 
         /**
-         * 设置mqtt客户端基本信息。Context/serverURI/clientId不能为null。
+         * Enables an android application to communicate with an MQTT server using non-blocking methods.
+         *
+         * @param androidClient MqttAndroidClient
+         * @return Builder
+         */
+        public Builder androidClient(MqttAndroidClient androidClient) {
+            this.androidClient = Objects.requireNonNull(androidClient, "androidClient == null");
+            return this;
+        }
+
+        /**
+         * Constructor - create an MqttAndroidClient that can be used to communicate with an MQTT server on android
+         *
+         * @param context   object used to pass context to the callback.
+         * @param serverURI specifies the protocol, host name and port to be used to
+         *                  connect to an MQTT server
+         * @param clientId  specifies the name by which this connection should be
+         *                  identified to the server
+         * @return Builder
          */
         public Builder clientInfo(Context context, String serverURI, String clientId) {
             this.context = Objects.requireNonNull(context, "context == null");
@@ -169,151 +201,102 @@ public class MqttWrapperClient {
         }
 
         /**
-         * 设置mqtt连接选项内容配置
+         * Constructor- create an MqttAndroidClient that can be used to communicate
+         * with an MQTT server on android
+         *
+         * @param context     used to pass context to the callback.
+         * @param serverURI   specifies the protocol, host name and port to be used to
+         *                    connect to an MQTT server
+         * @param clientId    specifies the name by which this connection should be
+         *                    identified to the server
+         * @param persistence the persistence class to use to store in-flight message. If
+         *                    null then the default persistence mechanism is used
+         * @param ackType     how the application wishes to acknowledge a message has been
+         *                    processed.
+         * @return Builder
          */
-        public <Option extends MqttConnectOptions> Builder mqttOptions(Option options) {
+        public Builder clientInfo(Context context, String serverURI, String clientId,
+                                  MqttClientPersistence persistence,
+                                  MqttAndroidClient.Ack ackType) {
+            clientInfo(context, serverURI, clientId);
+            this.persistence = persistence;
+            this.ackType = ackType == null ? MqttAndroidClient.Ack.AUTO_ACK : ackType;
+            return this;
+        }
+
+        /**
+         * set of connection parameters that override the defaults
+         *
+         * @param options  connection parameters
+         * @param <Option> MqttConnectOptions
+         * @return Builder
+         */
+        public <Option extends MqttConnectOptions> Builder connectOptions(Option options) {
             this.connectOptions = Objects.requireNonNull(options, "options == null");
             return this;
         }
 
         /**
-         * 设置mqtt连接选项内容配置
+         * Sets the DisconnectedBufferOptions for this client
+         *
+         * @param bufferOpts the DisconnectedBufferOptions
+         * @param <Option>   DisconnectedBufferOptions
+         * @return Builder
          */
-        public <Option extends DisconnectedBufferOptions> Builder disconnectedOptions(Option options) {
-            this.disconnectedOptions = Objects.requireNonNull(options, "options == null");
+        public <Option extends DisconnectedBufferOptions> Builder disconnectedOptions(Option bufferOpts) {
+            this.bufferOpts = Objects.requireNonNull(bufferOpts, "options == null");
             return this;
         }
 
         /**
-         * 设置用户名和密码
+         * Sets the default subscribe info for this client
+         *
+         * @param subscribeBodies Subscribe topic and qos
+         * @return Builder
          */
-        public Builder userNameAndPassword(String userName, String password) {
-            return userNameAndPassword(userName, password.toCharArray());
-        }
-
-        /**
-         * 设置用户名和密码
-         */
-        public Builder userNameAndPassword(String userName, char[] password) {
-            connectOptions.setUserName(userName);
-            connectOptions.setPassword(password);
+        public Builder subscribeBodies(SubscribeBody... subscribeBodies) {
+            this.subscribeBodies = Objects.requireNonNull(subscribeBodies,
+                    "subscribeBodies == null");
             return this;
         }
 
         /**
-         * 设置will主题
+         * Sets the default subscribe info for this client
+         *
+         * @param subscribeListener IMqttActionListener
+         * @param subscribeBodies   Subscribe topic and qos
+         * @return Builder
          */
-        public Builder will(String topic, String payload) {
-            return will(topic, payload, 1, true);
-        }
-
-        /**
-         * 设置will主题
-         */
-        public Builder will(String topic, String payload, int qos, boolean retained) {
-            connectOptions.setWill(topic, payload.getBytes(), qos, retained);
+        public Builder subscribeBodies(IMqttActionListener subscribeListener,
+                                       SubscribeBody... subscribeBodies) {
+            this.subscribeListener = subscribeListener;
+            this.subscribeBodies = Objects.requireNonNull(subscribeBodies,
+                    "subscribeBodies == null");
             return this;
         }
 
         /**
-         * 设置保持在线的判断时间间隔
+         * Build MqttWrapperClient by MqttWrapperClient.Builder
+         *
+         * @return MqttWrapperClient
          */
-        public Builder keepAliveInterval(int keepAliveInterval) {
-            if (keepAliveInterval < 0)
-                return this;
-
-            connectOptions.setKeepAliveInterval(keepAliveInterval);
-            return this;
-        }
-
-        /**
-         * 设置连接超时时间
-         */
-        public Builder connectionTimeout(int connectionTimeout) {
-            if (connectionTimeout < 0)
-                return this;
-
-            connectOptions.setConnectionTimeout(connectionTimeout);
-            return this;
-        }
-
-        /**
-         * 设置最大并发值
-         */
-        public Builder maxInflight(int maxInflight) {
-            if (maxInflight < 0)
-                return this;
-
-            connectOptions.setMaxInflight(maxInflight);
-            return this;
-        }
-
-        /**
-         * 设置客户端和服务器是否应该记住重新启动和重新连接之间的状态。
-         */
-        public Builder cleanSession(boolean cleanSession) {
-            connectOptions.setCleanSession(cleanSession);
-            return this;
-        }
-
-        /**
-         * 是否自动订阅主题
-         */
-        public Builder isAutoSubscribeToTopic(boolean isAutoSubscribeToTopic) {
-            this.isAutoSubscribeToTopic = isAutoSubscribeToTopic;
-            return this;
-        }
-
-        /**
-         * 设置如果连接断开，客户端是否将自动尝试重新连接到服务器
-         */
-        public Builder automaticReconnect(boolean automaticReconnect) {
-            connectOptions.setAutomaticReconnect(automaticReconnect);
-            return this;
-        }
-
-        /**
-         * 设置订阅主题内容
-         */
-        public Builder subscribeBodies(Queue<SubscribeBody> subscribeBodies) {
-            this.subscribeBodies = subscribeBodies;
-            return this;
-        }
-
-        /**
-         * 添加订阅主题内容
-         */
-        public Builder addSubscribeBodies(Queue<SubscribeBody> subscribeBodies) {
-            if (this.subscribeBodies == null)
-                this.subscribeBodies = new ArrayDeque<>();
-
-            this.subscribeBodies.addAll(subscribeBodies);
-            return this;
-        }
-
-        /**
-         * 添加订阅主题内容
-         */
-        public Builder addSubscribeBodies(SubscribeBody subscribeBody) {
-            if (this.subscribeBodies == null)
-                this.subscribeBodies = new ArrayDeque<>();
-
-            this.subscribeBodies.add(subscribeBody);
-            return this;
-        }
-
-        /**
-         * 消息处理工具
-         */
-//        public Builder addConverterFactory(DataConverter.Factory factory) {
-//            converterFactories.add(checkNotNull(factory, "DataConverter.MqttFactory == null"));
-//            return this;
-//        }
         public MqttWrapperClient build() {
 
-//            if (converterFactories.size() == 0) {
-//                throw new IllegalStateException("converterFactories is null.");
-//            }
+            // If androidClient is not null,
+            // it means that the developer wants to use the MqttAndroidClient created by himself
+            if (androidClient != null) {
+                return new MqttWrapperClient(this);
+            }
+
+            // Otherwise, create it according to the configuration content
+            Objects.requireNonNull(context, "The current context is empty," +
+                    " please set the context");
+            Objects.requireNonNull(serverURI, "The current serverURI is empty," +
+                    " please set the serverURI");
+            clientId = clientId == null || clientId.isEmpty() ? UUID.randomUUID().toString() : clientId;
+            ackType = ackType == null ? MqttAndroidClient.Ack.AUTO_ACK : ackType;
+            androidClient = new MqttAndroidClient(context, serverURI, clientId, persistence, ackType);
+
 
             return new MqttWrapperClient(this);
         }
