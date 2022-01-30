@@ -457,24 +457,7 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
     ) {
         unsubscribe(bodies, false, object : IResultActionListener {
             override fun onSuccess() {
-                val copyBodies: List<SubscribeBody> = subscribeBodies.values.toMutableList()
-                subscribeBodies.clear()
-                subscribe(bodies, true, object : IResultActionListener {
-                    override fun onSuccess() {
-                        listener?.onSuccess()
-                        subscribeListener?.onSuccess(IMqttListener.ACTION.SUBSCRIBE)
-                    }
-
-                    override fun onFailure(exception: Throwable?) {
-                        subscribeBodies.clear()
-                        // 重新订阅原来数据
-                        subscribe(copyBodies, true)
-
-                        listener?.onFailure(exception)
-                        subscribeListener?.onFailure(IMqttListener.ACTION.SUBSCRIBE, exception)
-                    }
-
-                })
+                reSubscribeBySuccess(bodies, listener)
             }
 
             override fun onFailure(exception: Throwable?) {
@@ -483,6 +466,47 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
             }
         })
 
+    }
+
+    /**
+     * 重新订阅mqtt主题
+     * 在取消订阅成功后，进行重新订阅新的主题
+     *
+     * @param bodies mqtt消息体集合
+     * @param listener 操作监听器
+     */
+    private fun reSubscribeBySuccess(
+        bodies: List<SubscribeBody>,
+        listener: IResultActionListener? = null
+    ) {
+        val copyBodies: List<SubscribeBody> = subscribeBodies.values.toMutableList()
+        subscribeBodies.clear()
+        subscribe(bodies, true, object : IResultActionListener {
+            override fun onSuccess() {
+                listener?.onSuccess()
+                subscribeListener?.onSuccess(IMqttListener.ACTION.SUBSCRIBE)
+            }
+
+            override fun onFailure(exception: Throwable?) {
+                subscribeBodies.clear()
+                // 重新订阅原来数据
+                subscribe(copyBodies, true)
+
+                listener?.onFailure(exception)
+                subscribeListener?.onFailure(IMqttListener.ACTION.SUBSCRIBE, exception)
+            }
+
+        })
+    }
+
+    /**
+     * 发送mqtt消息
+     *
+     * @param topic 主题
+     * @param message mqtt消息内容
+     */
+    fun publish(topic: String, message: MqttMessage) {
+        mqttClient.publish(topic, message)
     }
 
 

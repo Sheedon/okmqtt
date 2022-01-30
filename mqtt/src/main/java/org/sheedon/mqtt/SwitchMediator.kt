@@ -12,11 +12,18 @@ import org.sheedon.rr.core.RequestAdapter
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/30 10:27 上午
  */
-internal class SwitchMediator : DispatchAdapter<RequestBody, ResponseBody> {
+internal class SwitchMediator internal constructor(
+    _baseTopic: String = "",
+    _requestAdapter: RequestAdapter<RequestBody>? = null
+) :
+    DispatchAdapter<RequestBody, ResponseBody> {
 
     private var listener: DispatchAdapter.OnCallListener<ResponseBody>? = null
+    private val requestAdapter: RequestAdapter<RequestBody> =
+        _requestAdapter ?: MqttRequestAdapter(_baseTopic)
 
-    override fun bindCallListener(listener: DispatchAdapter.OnCallListener<ResponseBody>?) {
+    override
+    fun bindCallListener(listener: DispatchAdapter.OnCallListener<ResponseBody>?) {
         this.listener = listener
     }
 
@@ -30,6 +37,6 @@ internal class SwitchMediator : DispatchAdapter<RequestBody, ResponseBody> {
 
 
     override fun loadRequestAdapter(): RequestAdapter<RequestBody> {
-        TODO()
+        return requestAdapter
     }
 }

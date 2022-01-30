@@ -10,7 +10,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/30 11:13 上午
  */
-class ResponseBody() : MqttMessage() {
+class ResponseBody internal constructor() : MqttMessage() {
 
     var topic: String? = null
         private set
