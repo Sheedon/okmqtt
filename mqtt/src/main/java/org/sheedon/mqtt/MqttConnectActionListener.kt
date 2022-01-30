@@ -1,7 +1,8 @@
-package org.sheedon.mqtt;
+package org.sheedon.mqtt
 
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
-import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended
+import org.sheedon.mqtt.listener.IActionListener
 
 /**
  * mqtt连接动作的监听器
@@ -11,5 +12,5 @@ import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/27 11:38 上午
  */
-public interface MqttConnectActionListener extends MqttCallbackExtended, IMqttActionListener {
+interface MqttConnectActionListener : MqttCallbackExtended, IMqttActionListener, IActionListener {
 }

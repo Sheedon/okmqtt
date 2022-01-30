@@ -1,6 +1,6 @@
-package org.sheedon.mqtt;
+package org.sheedon.mqtt
 
-import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
+import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions
 
 /**
  * 断开的缓冲区选项
@@ -9,46 +9,45 @@ import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/26 4:46 下午
  */
-public class DefaultDisconnectedBufferOptions extends DisconnectedBufferOptions {
+class DefaultDisconnectedBufferOptions private constructor() : DisconnectedBufferOptions() {
 
-    private static DefaultDisconnectedBufferOptions theOptions;
+    companion object {
+        private var theOptions: DefaultDisconnectedBufferOptions? = null
+        /**
+         * 获取断开的缓冲区选项
+         *
+         * @return DisconnectedBufferOptions
+         */
+        /**
+         * 设置默认值
+         *
+         * @param options 选项
+         */
+        @JvmStatic
+        var default: DefaultDisconnectedBufferOptions?
+            get() {
+                synchronized(DefaultDisconnectedBufferOptions::class.java) {
+                    if (theOptions == null) {
+                        theOptions = DefaultDisconnectedBufferOptions()
+                    }
+                }
+                return theOptions
+            }
+            set(options) {
+                synchronized(DefaultDisconnectedBufferOptions::class.java) { theOptions = options }
+            }
+    }
 
     // 设置基础值
-    private DefaultDisconnectedBufferOptions() {
+    init {
 
         // 设置缓冲区启用
-        setBufferEnabled(true);
+        isBufferEnabled = true
         // 缓冲区大小
-        setBufferSize(100);
+        bufferSize = 100
         // 设置持久缓冲区
-        setPersistBuffer(false);
+        isPersistBuffer = false
         // 设置删除最早的消息
-        setDeleteOldestMessages(false);
-
-    }
-
-    /**
-     * 获取断开的缓冲区选项
-     *
-     * @return DisconnectedBufferOptions
-     */
-    static DefaultDisconnectedBufferOptions getDefault() {
-        synchronized (DefaultDisconnectedBufferOptions.class) {
-            if (theOptions == null) {
-                theOptions = new DefaultDisconnectedBufferOptions();
-            }
-        }
-        return theOptions;
-    }
-
-    /**
-     * 设置默认值
-     *
-     * @param options 选项
-     */
-    static void setDefault(DefaultDisconnectedBufferOptions options) {
-        synchronized (DefaultDisconnectedBufferOptions.class) {
-            theOptions = options;
-        }
+        isDeleteOldestMessages = false
     }
 }

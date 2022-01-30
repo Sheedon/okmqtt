@@ -1,4 +1,4 @@
-package org.sheedon.mqtt;
+package org.sheedon.mqtt
 
 /**
  * mqtt订阅主题内容
@@ -7,30 +7,20 @@ package org.sheedon.mqtt;
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/26 4:47 下午
  */
-public class SubscribeBody {
-    private String topic;
-    private int qos;
+class SubscribeBody {
+    var topic: String? = null
+    var qos = 0
 
-    public static SubscribeBody build(String topic, int qos) {
-        SubscribeBody body = new SubscribeBody();
-        body.topic = topic;
-        body.qos = qos;
-        return body;
+    fun convertKey(): String {
+        return topic + qos
     }
 
-    public String getTopic() {
-        return topic;
-    }
-
-    public int getQos() {
-        return qos;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-
-    public void setQos(int qos) {
-        this.qos = qos;
+    companion object {
+        fun build(topic: String, qos: Int): SubscribeBody {
+            val body = SubscribeBody()
+            body.topic = topic
+            body.qos = qos
+            return body
+        }
     }
 }
