@@ -45,6 +45,9 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
     private val subscribeListener: IActionListener? = builder.subscribeListener
     private val autoSubscribe: Boolean = builder.autoSubscribe
 
+    // 数据交换中介
+    internal var switchMediator: SwitchMediator? = null
+
     // 上一次重连时间
     private var lastConnectTime: Long = 0
     private var lastDisconnectTime: Long = 0
@@ -58,6 +61,12 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
         true
     }
 
+    /**
+     * mqtt连接动作的监听器
+     * 包括连接成功与否 和 重连
+     */
+    private interface MqttConnectActionListener : MqttCallbackExtended, IMqttActionListener,
+        IActionListener
 
     private val callbackListener: MqttConnectActionListener = object : MqttConnectActionListener {
 
@@ -144,9 +153,12 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
 
         @Throws(Exception::class)
         override fun messageArrived(topic: String, message: MqttMessage) {
+            switchMediator?.callResponse(ResponseBody(topic, message))
         }
 
-        override fun deliveryComplete(token: IMqttDeliveryToken) {}
+        override fun deliveryComplete(token: IMqttDeliveryToken) {
+            // 暂时不执行该方法
+        }
     }
 
     companion object {
@@ -164,6 +176,13 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
 
         mqttClient.setCallback(callbackListener)
         reConnect()
+    }
+
+    /**
+     * 绑定数据交换中介者
+     * */
+    internal fun bindSwitchMediator(switchMediator: SwitchMediator) {
+        this.switchMediator = switchMediator
     }
 
     /**
