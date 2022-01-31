@@ -19,7 +19,7 @@ class RealObserver(
     companion object {
 
         @JvmStatic
-        fun newCall(client: MqttRRBinderClient, request: Request): Observable {
+        fun newObservable(client: MqttRRBinderClient, request: Request): Observable {
             val realObservable = RealObservable(client, request)
             return RealObserver(realObservable)
         }

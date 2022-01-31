@@ -505,7 +505,7 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
      * @param topic 主题
      * @param message mqtt消息内容
      */
-    fun publish(topic: String, message: MqttMessage):IMqttDeliveryToken {
+    fun publish(topic: String, message: MqttMessage): IMqttDeliveryToken {
         return mqttClient.publish(topic, message)
     }
 
@@ -651,9 +651,9 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
          */
         @JvmOverloads
         fun subscribeBodies(
-            vararg subscribeBodies: SubscribeBody,
             subscribeListener: IActionListener? = null,
-            autoSubscribe: Boolean = false
+            autoSubscribe: Boolean = false,
+            vararg subscribeBodies: SubscribeBody
         ) = apply {
             this.subscribeBodies.clear()
             subscribeBodies.forEach {

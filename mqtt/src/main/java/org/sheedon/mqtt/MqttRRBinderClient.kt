@@ -38,7 +38,7 @@ class MqttRRBinderClient constructor(
      * @return Observable 订阅某个主题，监听该主题的消息
      */
     override fun newObservable(request: IRequest<String, RequestBody>): Observable<String, RequestBody, ResponseBody> {
-        return RealObserver.newCall(this, request as Request)
+        return RealObserver.newObservable(this, request as Request)
     }
 
 
