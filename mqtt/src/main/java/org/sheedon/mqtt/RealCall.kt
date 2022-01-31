@@ -23,9 +23,8 @@ class RealCall(val realCall: RealCall<String, String, RequestBody, ResponseBody>
         }
     }
 
-    override fun <RRCallback : Callback<IRequest<String, RequestBody>,
-            IResponse<String, ResponseBody>>> enqueue(
-        callback: RRCallback?
+    override fun <RRCallback : Callback<IRequest<String, RequestBody>, IResponse<String, ResponseBody>>?> enqueue(
+        callback: RRCallback
     ) {
         realCall.enqueue(callback)
     }

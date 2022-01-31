@@ -505,8 +505,8 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
      * @param topic 主题
      * @param message mqtt消息内容
      */
-    fun publish(topic: String, message: MqttMessage) {
-        mqttClient.publish(topic, message)
+    fun publish(topic: String, message: MqttMessage):IMqttDeliveryToken {
+        return mqttClient.publish(topic, message)
     }
 
 

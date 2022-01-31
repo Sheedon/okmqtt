@@ -14,13 +14,19 @@ import org.sheedon.rr.core.RequestAdapter
  */
 internal class SwitchMediator internal constructor(
     _baseTopic: String = "",
+    _charsetName: String = "UTF-8",
     _requestAdapter: RequestAdapter<RequestBody>? = null
 ) :
     DispatchAdapter<RequestBody, ResponseBody> {
 
     private var listener: DispatchAdapter.OnCallListener<ResponseBody>? = null
+    private val charsetName: String = if (_charsetName.isEmpty()) {
+        "UTF-8"
+    } else {
+        _charsetName
+    }
     private val requestAdapter: RequestAdapter<RequestBody> =
-        _requestAdapter ?: MqttRequestAdapter(_baseTopic)
+        _requestAdapter ?: MqttRequestAdapter(_baseTopic, charsetName)
 
     override
     fun bindCallListener(listener: DispatchAdapter.OnCallListener<ResponseBody>?) {

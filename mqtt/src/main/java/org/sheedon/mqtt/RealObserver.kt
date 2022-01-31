@@ -40,11 +40,11 @@ class RealObserver(
         )
     }
 
-    override fun isCanceled(): Boolean {
-        return realObserver.isCanceled()
-    }
-
     override fun cancel() {
         realObserver.cancel()
+    }
+
+    override fun isCanceled(): Boolean {
+        return realObserver.isCanceled()
     }
 }

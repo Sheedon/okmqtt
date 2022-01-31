@@ -1,6 +1,7 @@
 package org.sheedon.mqtt
 
 import org.sheedon.rr.core.RequestAdapter
+import java.nio.charset.Charset
 
 /**
  * mqtt 请求适配器
@@ -9,7 +10,8 @@ import org.sheedon.rr.core.RequestAdapter
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/30 2:03 下午
  */
-open class MqttRequestAdapter(val baseTopic: String) : RequestAdapter<RequestBody> {
+open class MqttRequestAdapter(val baseTopic: String, val charsetName: String) :
+    RequestAdapter<RequestBody> {
 
     private var client: MqttWrapperClient? = null
 
@@ -21,13 +23,25 @@ open class MqttRequestAdapter(val baseTopic: String) : RequestAdapter<RequestBod
     }
 
     override fun checkRequestData(data: RequestBody): RequestBody {
-        TODO("Not yet implemented")
+        if (data.autoEncode && charsetName.isNotEmpty()) {
+            data.payload = data.data.toByteArray(Charset.forName(charsetName))
+        }
+
+        if (baseTopic.isNotEmpty()) {
+            data.topic = baseTopic + data.topic
+        }
+        return data
     }
 
     override fun publish(data: RequestBody): Boolean {
         if (client == null) return false
 
-        client!!.publish(data.topic, data)
+        try {
+            val token = client!!.publish(data.topic, data)
+            token.waitForCompletion(3000)
+        } catch (e: Exception) {
+            return false
+        }
         return true
     }
 }

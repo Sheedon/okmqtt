@@ -14,6 +14,15 @@ class ResponseBody internal constructor() : MqttMessage() {
 
     var topic: String? = null
         private set
+    var data: String? = null
+        get() {
+            if (field != null) {
+                return field
+            }
+
+            field = super.getPayload().toString()
+            return field
+        }
 
     constructor(topic: String, mqttMessage: MqttMessage) : this() {
         this.topic = topic

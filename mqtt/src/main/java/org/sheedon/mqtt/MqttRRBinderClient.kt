@@ -1,7 +1,9 @@
 package org.sheedon.mqtt
 
+import org.sheedon.rr.core.Call
+import org.sheedon.rr.core.IRequest
+import org.sheedon.rr.core.Observable
 import org.sheedon.rr.dispatcher.AbstractClient
-import org.sheedon.rr.dispatcher.DefaultEventBehaviorService
 import org.sheedon.rr.dispatcher.DefaultEventManager
 import org.sheedon.rr.timeout.android.TimeOutHandler
 import java.lang.IllegalStateException
@@ -18,6 +20,26 @@ class MqttRRBinderClient constructor(
 ) : AbstractClient<String/*反馈主题*/, String/*消息ID*/, RequestBody/*请求格式*/, ResponseBody/*反馈格式*/>(
     builder
 ) {
+
+    /**
+     * 创建请求响应的Call
+     *
+     * @param request 请求对象
+     * @return Call 用于执行入队/提交请求的动作
+     */
+    override fun newCall(request: IRequest<String, RequestBody>): Call<String, RequestBody, ResponseBody> {
+        return RealCall.newCall(this, request as Request)
+    }
+
+    /**
+     * 创建信息的观察者 Observable
+     *
+     * @param request 请求对象
+     * @return Observable 订阅某个主题，监听该主题的消息
+     */
+    override fun newObservable(request: IRequest<String, RequestBody>): Observable<String, RequestBody, ResponseBody> {
+        return RealObserver.newCall(this, request as Request)
+    }
 
 
     class Builder :
@@ -51,7 +73,7 @@ class MqttRRBinderClient constructor(
 
         override fun checkAndBind() {
             if (behaviorServices.isEmpty()) {
-                behaviorServices.add(DefaultEventBehaviorService())
+                behaviorServices.add(MqttEventBehaviorService())
             }
             if (eventManagerPool.isEmpty()) {
                 eventManagerPool.add(DefaultEventManager())
@@ -59,11 +81,8 @@ class MqttRRBinderClient constructor(
             if (timeoutManager == null) {
                 timeoutManager = TimeOutHandler()
             }
-            if(requestAdapter == null){
-//                requestAdapter =
-            }
             if (dispatchAdapter == null) {
-                dispatchAdapter = SwitchMediator(baseTopic, requestAdapter)
+                dispatchAdapter = SwitchMediator(baseTopic, charsetName, requestAdapter)
             }
             if (backTopicConverter == null) {
                 throw IllegalStateException("backTopicConverter is null.")
