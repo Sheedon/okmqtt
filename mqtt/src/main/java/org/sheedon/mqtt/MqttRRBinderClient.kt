@@ -20,9 +20,8 @@ class MqttRRBinderClient constructor(
 ) {
 
 
-
-
-    class Builder : AbstractClient.Builder<String, String, RequestBody, ResponseBody>() {
+    class Builder :
+        AbstractClient.Builder<MqttRRBinderClient, String, String, RequestBody, ResponseBody>() {
 
         // 基础主题 用于主题拼接
         private var baseTopic: String = ""
@@ -60,10 +59,13 @@ class MqttRRBinderClient constructor(
             if (timeoutManager == null) {
                 timeoutManager = TimeOutHandler()
             }
+            if(requestAdapter == null){
+//                requestAdapter =
+            }
             if (dispatchAdapter == null) {
                 dispatchAdapter = SwitchMediator(baseTopic, requestAdapter)
             }
-            if(backTopicConverter == null){
+            if (backTopicConverter == null) {
                 throw IllegalStateException("backTopicConverter is null.")
             }
             if (responseAdapter == null) {
@@ -71,10 +73,10 @@ class MqttRRBinderClient constructor(
             }
         }
 
-        @Suppress("UNCHECKED_CAST")
-        override fun <Client : AbstractClient<String, String, RequestBody, ResponseBody>> builder(): Client {
-            return MqttRRBinderClient(this) as Client
+        override fun builder(): MqttRRBinderClient {
+            return MqttRRBinderClient(this)
         }
+
 
     }
 }
