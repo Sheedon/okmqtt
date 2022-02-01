@@ -281,14 +281,26 @@ class OkMqttClient internal constructor(
         }
 
         /**
+         * 设置反馈主题转换器集合
+         *
+         * @param backTopicConverters 反馈主题转换器集合
+         * @return Builder<BackTopic></BackTopic>, ID>
+         */
+        fun backTopicConverters(backTopicConverters: MutableList<DataConverter<ResponseBody, String>>) =
+            apply {
+                this.mqttRRBinderBuilder.backTopicConverters(backTopicConverters)
+            }
+
+        /**
          * 设置反馈主题转换器
          *
          * @param backTopicConverter 反馈主题转换器
          * @return Builder<BackTopic></BackTopic>, ID>
          */
-        fun backTopicConverter(backTopicConverter: DataConverter<ResponseBody, String>) = apply {
-            this.mqttRRBinderBuilder.backTopicConverter(backTopicConverter)
-        }
+        fun addBackTopicConverter(backTopicConverter: DataConverter<ResponseBody, String>) =
+            apply {
+                this.mqttRRBinderBuilder.addBackTopicConverter(backTopicConverter)
+            }
 
         /**
          * 设置响应调度适配者

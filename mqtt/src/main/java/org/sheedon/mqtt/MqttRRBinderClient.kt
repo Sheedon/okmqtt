@@ -51,6 +51,7 @@ class MqttRRBinderClient constructor(
         // 字符集编码类型
         private var charsetName: String = "GBK"
 
+
         /**
          * 设置基础主题，后续添加的topic 则在此基础上拼接
          *
@@ -84,7 +85,7 @@ class MqttRRBinderClient constructor(
             if (dispatchAdapter == null) {
                 dispatchAdapter = SwitchMediator(baseTopic, charsetName, requestAdapter)
             }
-            if (backTopicConverter == null) {
+            if (backTopicConverters.isEmpty()) {
                 throw IllegalStateException("backTopicConverter is null.")
             }
             if (responseAdapter == null) {
