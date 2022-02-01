@@ -1,8 +1,7 @@
 package org.sheedon.mqtt
 
-import org.sheedon.rr.core.Call
+import org.sheedon.rr.core.DispatchAdapter
 import org.sheedon.rr.core.IRequest
-import org.sheedon.rr.core.Observable
 import org.sheedon.rr.dispatcher.AbstractClient
 import org.sheedon.rr.dispatcher.DefaultEventManager
 import org.sheedon.rr.timeout.android.TimeOutHandler
@@ -21,13 +20,24 @@ class MqttRRBinderClient constructor(
     builder
 ) {
 
+    internal val switchMediator: SwitchMediator =
+        if (builder.loadDispatchAdapter() is SwitchMediator)
+            builder.loadDispatchAdapter() as SwitchMediator
+        else
+            SwitchMediator(
+                builder.baseTopic,
+                builder.charsetName,
+                builder.loadDispatchAdapter().loadRequestAdapter()
+            )
+
+
     /**
      * 创建请求响应的Call
      *
      * @param request 请求对象
      * @return Call 用于执行入队/提交请求的动作
      */
-    override fun newCall(request: IRequest<String, RequestBody>): Call<String, RequestBody, ResponseBody> {
+    override fun newCall(request: IRequest<String, RequestBody>): Call {
         return RealCall.newCall(this, request as Request)
     }
 
@@ -37,7 +47,7 @@ class MqttRRBinderClient constructor(
      * @param request 请求对象
      * @return Observable 订阅某个主题，监听该主题的消息
      */
-    override fun newObservable(request: IRequest<String, RequestBody>): Observable<String, RequestBody, ResponseBody> {
+    override fun newObservable(request: IRequest<String, RequestBody>): Observable {
         return RealObserver.newObservable(this, request as Request)
     }
 
@@ -46,11 +56,15 @@ class MqttRRBinderClient constructor(
         AbstractClient.Builder<MqttRRBinderClient, String, String, RequestBody, ResponseBody>() {
 
         // 基础主题 用于主题拼接
-        private var baseTopic: String = ""
+        internal var baseTopic: String = ""
 
         // 字符集编码类型
-        private var charsetName: String = "GBK"
+        internal var charsetName: String = "GBK"
 
+
+        internal fun loadDispatchAdapter(): DispatchAdapter<RequestBody, ResponseBody> {
+            return dispatchAdapter!!
+        }
 
         /**
          * 设置基础主题，后续添加的topic 则在此基础上拼接

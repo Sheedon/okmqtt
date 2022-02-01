@@ -5,8 +5,6 @@ import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 import org.sheedon.mqtt.listener.*
 import org.sheedon.rr.core.*
-import org.sheedon.rr.core.Call
-import org.sheedon.rr.core.Observable
 import org.sheedon.rr.dispatcher.Dispatcher
 import org.sheedon.rr.timeout.TimeoutManager
 
@@ -22,7 +20,17 @@ class OkMqttClient internal constructor(
 ) {
 
     private val mqttRRBinderClient: MqttRRBinderClient = builder.mqttRRBinderClient!!
-    private val mqttClient: MqttWrapperClient = builder.mqttClient!!
+    val mqttClient: MqttWrapperClient = builder.mqttClient!!
+
+    init {
+        val requestAdapter = mqttRRBinderClient.dispatchManager.requestAdapter()
+        if (requestAdapter is MqttRequestAdapter) {
+            requestAdapter.bindMqttClient(mqttClient)
+        }
+
+        mqttClient.bindSwitchMediator(mqttRRBinderClient.switchMediator)
+
+    }
 
     /**
      * 创建请求响应的Call
@@ -30,7 +38,7 @@ class OkMqttClient internal constructor(
      * @param request 请求对象
      * @return Call 用于执行入队/提交请求的动作
      */
-    fun newCall(request: IRequest<String, RequestBody>): Call<String, RequestBody, ResponseBody> {
+    fun newCall(request: IRequest<String, RequestBody>): Call {
         return mqttRRBinderClient.newCall(request)
     }
 
@@ -40,7 +48,7 @@ class OkMqttClient internal constructor(
      * @param request 请求对象
      * @return Observable 订阅某个主题，监听该主题的消息
      */
-    fun newObservable(request: IRequest<String, RequestBody>): Observable<String, RequestBody, ResponseBody> {
+    fun newObservable(request: IRequest<String, RequestBody>): Observable {
         return mqttRRBinderClient.newObservable(request)
     }
 

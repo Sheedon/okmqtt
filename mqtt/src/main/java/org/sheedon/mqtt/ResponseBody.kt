@@ -20,7 +20,7 @@ class ResponseBody internal constructor() : MqttMessage() {
                 return field
             }
 
-            field = super.getPayload().toString()
+            field = String(super.getPayload())
             return field
         }
 

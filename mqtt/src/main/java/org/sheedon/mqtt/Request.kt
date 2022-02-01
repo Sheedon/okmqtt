@@ -21,6 +21,24 @@ class Request internal constructor(
         internal var qos: Int = 0
         internal var retained: Boolean = false
 
+
+
+        override fun backTopic(backTopic: String) = apply {
+            super.backTopic(backTopic)
+        }
+
+        override fun delayMilliSecond(delayMilliSecond: Int) = apply {
+            super.delayMilliSecond(delayMilliSecond)
+        }
+
+        override fun delaySecond(delaySecond: Long) = apply {
+            super.delaySecond(delaySecond)
+        }
+
+        override fun body(body: RequestBody?) = apply {
+            super.body(body)
+        }
+
         /**
          * 设置请求主题
          * @param topic 请求主题
@@ -66,6 +84,9 @@ class Request internal constructor(
         }
 
         override fun build(): Request {
+            if (super.body() == null) {
+                body(RequestBody(topic, data, qos, retained))
+            }
             return Request(this)
         }
 

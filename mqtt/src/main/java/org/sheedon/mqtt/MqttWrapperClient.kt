@@ -78,12 +78,14 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
                 if (mqttClient.isConnected) IMqttListener.ACTION.CONNECT else IMqttListener.ACTION.DISCONNECT
             connectListener?.onSuccess(action)
             resetStatus()
+            autoSubscribe()
             handler.removeCallbacksAndMessages(null)
         }
 
         override fun onSuccess(action: IMqttListener.ACTION) {
             connectListener?.onSuccess(action)
             resetStatus()
+            autoSubscribe()
             handler.removeCallbacksAndMessages(null)
         }
 
@@ -119,6 +121,7 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
         override fun connectComplete(reconnect: Boolean, serverURI: String) {
             connectListener?.onSuccess(IMqttListener.ACTION.CONNECT)
             resetStatus()
+            autoSubscribe()
             handler.removeCallbacksAndMessages(null)
         }
 
