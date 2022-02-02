@@ -20,16 +20,7 @@ class MqttRRBinderClient constructor(
     builder
 ) {
 
-    internal val switchMediator: SwitchMediator =
-        if (builder.loadDispatchAdapter() is SwitchMediator)
-            builder.loadDispatchAdapter() as SwitchMediator
-        else
-            SwitchMediator(
-                builder.baseTopic,
-                builder.charsetName,
-                builder.loadDispatchAdapter().loadRequestAdapter()
-            )
-
+    internal val switchMediator: DispatchAdapter<RequestBody, ResponseBody> = builder.loadDispatchAdapter()
 
     /**
      * 创建请求响应的Call

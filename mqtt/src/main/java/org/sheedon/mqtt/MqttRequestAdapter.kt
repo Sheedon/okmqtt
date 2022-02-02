@@ -11,16 +11,7 @@ import java.nio.charset.Charset
  * @Date: 2022/1/30 2:03 下午
  */
 open class MqttRequestAdapter(val baseTopic: String, val charsetName: String) :
-    RequestAdapter<RequestBody> {
-
-    private var client: MqttWrapperClient? = null
-
-    /**
-     * 绑定mqtt客户端，用于持有该对象以发送消息
-     */
-    fun bindMqttClient(client: MqttWrapperClient) {
-        this.client = client
-    }
+    RequestAdapter.AbstractRequestImpl<RequestBody>() {
 
     override fun checkRequestData(data: RequestBody): RequestBody {
         if (data.autoEncode && charsetName.isNotEmpty()) {
@@ -34,10 +25,10 @@ open class MqttRequestAdapter(val baseTopic: String, val charsetName: String) :
     }
 
     override fun publish(data: RequestBody): Boolean {
-        if (client == null) return false
+        if (sender == null) return false
 
         try {
-            val token = client!!.publish(data.topic, data)
+            val token = (sender!! as MqttWrapperClient).publish(data.topic, data)
             token.waitForCompletion(3000)
         } catch (e: Exception) {
             return false

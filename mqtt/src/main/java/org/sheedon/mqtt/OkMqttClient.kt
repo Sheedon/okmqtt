@@ -24,11 +24,9 @@ class OkMqttClient internal constructor(
 
     init {
         val requestAdapter = mqttRRBinderClient.dispatchManager.requestAdapter()
-        if (requestAdapter is MqttRequestAdapter) {
-            requestAdapter.bindMqttClient(mqttClient)
-        }
+        requestAdapter!!.bindSender(mqttClient)
 
-        mqttClient.bindSwitchMediator(mqttRRBinderClient.switchMediator)
+        mqttClient.bindDispatchAdapter(mqttRRBinderClient.switchMediator)
 
     }
 

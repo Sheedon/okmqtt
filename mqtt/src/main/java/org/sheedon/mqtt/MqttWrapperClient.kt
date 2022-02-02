@@ -8,6 +8,8 @@ import kotlin.Throws
 import org.eclipse.paho.android.service.MqttAndroidClient.Ack
 import org.eclipse.paho.client.mqttv3.*
 import org.sheedon.mqtt.listener.*
+import org.sheedon.rr.core.DispatchAdapter
+import org.sheedon.rr.core.IRequestSender
 import java.lang.Exception
 import java.util.*
 
@@ -18,7 +20,9 @@ import java.util.*
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/27 10:19 上午
  */
-class MqttWrapperClient private constructor(builder: Builder = Builder()) {
+class MqttWrapperClient private constructor(
+    builder: Builder = Builder()
+) : IRequestSender {
     // 锁
     private val lock = Any()
 
@@ -46,7 +50,7 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
     private val autoSubscribe: Boolean = builder.autoSubscribe
 
     // 数据交换中介
-    internal var switchMediator: SwitchMediator? = null
+    internal var switchMediator: DispatchAdapter<RequestBody, ResponseBody>? = null
 
     // 上一次重连时间
     private var lastConnectTime: Long = 0
@@ -184,7 +188,7 @@ class MqttWrapperClient private constructor(builder: Builder = Builder()) {
     /**
      * 绑定数据交换中介者
      * */
-    internal fun bindSwitchMediator(switchMediator: SwitchMediator) {
+    internal fun bindDispatchAdapter(switchMediator: DispatchAdapter<RequestBody, ResponseBody>) {
         this.switchMediator = switchMediator
     }
 
