@@ -38,9 +38,9 @@ dependencies {
     api 'org.eclipse.paho:org.eclipse.paho.android.service:1.1.1'
 
     // 请求响应模式
-    api 'com.github.Sheedon.RequestResponseBinder:rr-dispatcher:0.2.4-alpha'
+    api 'com.github.Sheedon.RequestResponseBinder:rr-dispatcher:0.2.5-alpha'
     // android 环境下的超时处理者，java环境下正在开发中
-    api 'com.github.Sheedon.RequestResponseBinder:rr-timeout-android:0.2.4-alpha'
+    api 'com.github.Sheedon.RequestResponseBinder:rr-timeout-android:0.2.5-alpha'
 
     // gson
     implementation 'com.google.code.gson:gson:2.8.9'

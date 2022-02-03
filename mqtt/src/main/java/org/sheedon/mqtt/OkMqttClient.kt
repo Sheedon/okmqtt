@@ -319,6 +319,16 @@ class OkMqttClient internal constructor(
         }
 
         /**
+         * 是否开启请求响应绑定者的log
+         *
+         * @param open 是否开启log
+         * @return Builder<BackTopic></BackTopic>, ID>
+         */
+        fun openRRBinderLog(open: Boolean) = apply {
+            this.mqttRRBinderBuilder.openLog(open)
+        }
+
+        /**
          * Enables an android application to communicate with an MQTT server using non-blocking methods.
          *
          * @param androidClient MqttAndroidClient
