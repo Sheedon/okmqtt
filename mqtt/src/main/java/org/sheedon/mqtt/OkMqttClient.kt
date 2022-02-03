@@ -4,6 +4,8 @@ import android.content.Context
 import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 import org.sheedon.mqtt.listener.*
+import org.sheedon.mqtt.template.ILogger
+import org.sheedon.mqtt.utils.Logger
 import org.sheedon.rr.core.*
 import org.sheedon.rr.dispatcher.Dispatcher
 import org.sheedon.rr.timeout.TimeoutManager
@@ -319,16 +321,6 @@ class OkMqttClient internal constructor(
         }
 
         /**
-         * 是否开启请求响应绑定者的log
-         *
-         * @param open 是否开启log
-         * @return Builder<BackTopic></BackTopic>, ID>
-         */
-        fun openRRBinderLog(open: Boolean) = apply {
-            this.mqttRRBinderBuilder.openLog(open)
-        }
-
-        /**
          * Enables an android application to communicate with an MQTT server using non-blocking methods.
          *
          * @param androidClient MqttAndroidClient
@@ -425,6 +417,40 @@ class OkMqttClient internal constructor(
             vararg subscribeBodies: SubscribeBody
         ) = apply {
             this.mqttBuilder.subscribeBodies(subscribeListener, autoSubscribe, *subscribeBodies)
+        }
+
+        /**
+         * 是否开启log
+         *
+         * @param showMqttLog 是否开启 Mqtt 调度者的log
+         * @return Builder<BackTopic></BackTopic>, ID>
+         */
+        @JvmOverloads
+        fun openLog(showMqttLog: Boolean, openRRBindLog: Boolean = false) = apply {
+            Logger.showLog(showMqttLog)
+            this.mqttRRBinderBuilder.openLog(openRRBindLog)
+        }
+
+        /**
+         * 是否开启显示堆栈跟踪
+         *
+         * @param isShowStackTrace 是否显示堆栈跟踪
+         * @return Builder<BackTopic></BackTopic>, ID>
+         */
+        @JvmOverloads
+        fun openStackTrace(isShowStackTrace: Boolean, openRRBindTrace: Boolean = false) = apply {
+            Logger.showStackTrace(isShowStackTrace)
+//            this.mqttRRBinderBuilder.openStackTrace(openRRBindTrace)
+        }
+
+        /**
+         * 配置自定义的Logger
+         *
+         * @param logger Logger
+         * @return Builder<BackTopic></BackTopic>, ID>
+         */
+        fun setLogger(logger: ILogger) = apply {
+            Logger.setLogger(logger)
         }
 
         fun build(): OkMqttClient {
