@@ -161,6 +161,7 @@ class MqttWrapperClient private constructor(
 
         @Throws(Exception::class)
         override fun messageArrived(topic: String, message: MqttMessage) {
+            messageListener?.messageArrived(topic, message)
             switchMediator?.callResponse(ResponseBody(topic, message))
         }
 
