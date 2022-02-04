@@ -1,5 +1,6 @@
 package org.sheedon.mqtt
 
+import org.sheedon.mqtt.utils.Logger
 import org.sheedon.rr.core.EventBehavior
 import java.util.concurrent.Executors
 
@@ -22,6 +23,7 @@ class MqttEventBehaviorService : EventBehavior {
      * @return 返回true，代表当前以被处理，无需其他事件执行者再去操作
      */
     override fun enqueueRequestEvent(requestRunnable: Runnable): Boolean {
+        Logger.info("enqueue requestRunnable to RequestEvent by MqttEventBehaviorService")
         service.execute(requestRunnable)
         return true
     }
@@ -33,6 +35,7 @@ class MqttEventBehaviorService : EventBehavior {
      * @return 返回true，代表当前以被处理，无需其他事件执行者再去操作
      */
     override fun enqueueCallbackEvent(callbackRunnable: Runnable): Boolean {
+        Logger.info("enqueue callbackRunnable to CallbackEvent by MqttEventBehaviorService")
         service.execute(callbackRunnable)
         return true
     }

@@ -31,9 +31,8 @@ class MqttClient {
     private fun createClient() {
 
         // 创建MqttClient
-        val clientId = "" // 设置设备编号
-
-        val serverUri = "" // 设置服务器地址
+        val clientId = "yhkhs20181029046" // 设置设备编号
+        val serverUri = "tcp://yanhang.kmdns.net:3883" // 设置服务器地址
         val subscribeBodies: MutableList<SubscribeBody> = ArrayList()
         subscribeBodies.add(
             SubscribeBody.build(
