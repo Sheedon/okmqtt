@@ -3,7 +3,7 @@ package org.sheedon.mqtt
 import org.sheedon.rr.core.Observable
 
 /**
- * 观察是指定订阅的消息。该消息可取消。
+ * Observations are messages for which subscriptions are specified. The message can be cancelled.
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -12,7 +12,8 @@ import org.sheedon.rr.core.Observable
 interface Observable : Observable<String, RequestBody, ResponseBody> {
 
     /**
-     * 使用协议中的Callback ，使用默认subscribe(RRCallback callback)也可，只是泛型显示过多
+     * Use the Callback in the protocol, you can also use the default subscribe (RRCallback callback),
+     * but the generic type is too much
      *
      * @param callback Callback
      */

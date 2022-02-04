@@ -4,9 +4,8 @@ import org.sheedon.rr.core.DispatchAdapter
 import org.sheedon.rr.core.RequestAdapter
 
 /**
- * 数据交换中介者
- * 用于将请求响应模型下请求消息 发送到 mqttClient
- * mqttClient 订阅的消息 反馈到 请求响应的模块下
+ * The data exchange intermediary is used to send the request message under the request-response model to the mqttClient,
+ * and the mqttClient "subscribed message" is fed back to the "request-response module"
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

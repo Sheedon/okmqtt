@@ -3,7 +3,7 @@ package org.sheedon.mqtt
 import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions
 
 /**
- * 断开的缓冲区选项
+ * Default broken buffer option
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -12,16 +12,15 @@ import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions
 class DefaultDisconnectedBufferOptions private constructor() : DisconnectedBufferOptions() {
 
     companion object {
-        private var theOptions: DefaultDisconnectedBufferOptions? = null
         /**
-         * 获取断开的缓冲区选项
+         * Broken buffer option
          *
          * @return DisconnectedBufferOptions
          */
+        private var theOptions: DefaultDisconnectedBufferOptions? = null
+
         /**
-         * 设置默认值
-         *
-         * @param options 选项
+         * Set broken buffer option defaults
          */
         @JvmStatic
         var default: DefaultDisconnectedBufferOptions?
@@ -38,16 +37,16 @@ class DefaultDisconnectedBufferOptions private constructor() : DisconnectedBuffe
             }
     }
 
-    // 设置基础值
+    // set base value
     init {
 
-        // 设置缓冲区启用
+        // set buffer enabled
         isBufferEnabled = true
-        // 缓冲区大小
+        // buffer size
         bufferSize = 100
-        // 设置持久缓冲区
+        // set persistent buffer
         isPersistBuffer = false
-        // 设置删除最早的消息
+        // set to delete oldest messages
         isDeleteOldestMessages = false
     }
 }

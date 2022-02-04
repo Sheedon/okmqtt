@@ -4,7 +4,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage
 import java.lang.Exception
 
 /**
- * 全局消息监听器
+ * Message listener, used to globally monitor messages subscribed to by mqtt
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

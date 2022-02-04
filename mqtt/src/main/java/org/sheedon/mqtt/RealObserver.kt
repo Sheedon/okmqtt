@@ -6,7 +6,7 @@ import org.sheedon.rr.dispatcher.RealObservable
 import org.sheedon.rr.core.Callback
 
 /**
- * 真实观察者包装类，用于调度本地构建的subscribe
+ * Real Observer wrapper class for dispatching locally constructed subscribes
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

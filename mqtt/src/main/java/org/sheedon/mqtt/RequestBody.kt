@@ -5,7 +5,8 @@ import org.eclipse.paho.client.mqttv3.MqttMessage
 import java.nio.charset.Charset
 
 /**
- * 请求对象内容体，包含：「请求主题」+「消息内容」+「消息质量」+「是否保留」
+ * The content body of the request object,
+ * including: "request subject" + "message content" + "message quality" + "reserve or not"
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

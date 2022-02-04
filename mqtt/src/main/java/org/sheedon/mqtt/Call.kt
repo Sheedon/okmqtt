@@ -3,7 +3,8 @@ package org.sheedon.mqtt
 import org.sheedon.rr.core.Call
 
 /**
- * 调用是已准备好执行的请求。由于该对象表示单个请求响应对（流），因此不能执行两次。
+ * A call is a request that is ready to execute.
+ * Since the object represents a single request-response pair (stream), it cannot be executed twice.
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -12,9 +13,10 @@ import org.sheedon.rr.core.Call
 interface Call : Call<String, RequestBody, ResponseBody> {
 
     /**
-     * 使用协议中的Callback ，使用默认enqueue(RRCallback callback)也可，只是泛型显示过多
+     * Use the Callback in the protocol, you can also use the default enqueue (RRCallback callback),
+     * but too many generics are displayed
      *
-     * @param callback Callback
+     * @param callback Callback with request
      */
     fun enqueue(callback: Callback?)
 

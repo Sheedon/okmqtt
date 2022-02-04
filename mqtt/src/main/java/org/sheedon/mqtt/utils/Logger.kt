@@ -3,7 +3,8 @@ package org.sheedon.mqtt.utils
 import org.sheedon.mqtt.template.ILogger
 
 /**
- * Logger包装类
+ * Logger wrapper class
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2022/2/3 12:40 下午
@@ -11,6 +12,10 @@ import org.sheedon.mqtt.template.ILogger
 object Logger : ILogger {
 
     private var logger: ILogger? = null
+
+    override fun isMonitorMode() = logger?.isMonitorMode() ?: false
+
+    override fun getDefaultTag() = logger?.getDefaultTag()
 
     fun setLogger(logger: ILogger) {
         this.logger = logger
@@ -73,8 +78,4 @@ object Logger : ILogger {
     override fun monitor(message: String?) {
         logger?.monitor(message)
     }
-
-    override fun isMonitorMode() = logger?.isMonitorMode() ?: false
-
-    override fun getDefaultTag() = logger?.getDefaultTag()
 }

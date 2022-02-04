@@ -6,7 +6,7 @@ import org.sheedon.rr.dispatcher.RealCall
 import org.sheedon.rr.core.Callback
 
 /**
- * 真实Call包装类，用于调度本地构建的enqueue
+ * Real Call wrapper class for scheduling locally built enqueues
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

@@ -1,9 +1,10 @@
 package org.sheedon.mqtt.listener
 
 /**
- * 全局动作监听器
- * 用于订阅和取消订阅的监听器
- * 用于连接和取消连接的监听器
+ * Implementers of this interface will be notified when the asynchronous operation is complete.
+ * Mainly used for "connect", "disconnect", "subscribe", "unsubscribe".
+ * After receiving the feedback result, the action field indicates the processing type of the request,
+ * and onSuccess/onFailure methods indicate the content of the success or failure
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -12,12 +13,22 @@ package org.sheedon.mqtt.listener
 interface IActionListener {
 
     /**
+     * The enumeration object of mqtt action listener includes "subscribe", "unsubscribe", "connect", "unconnect".
+     */
+    enum class ACTION {
+        CONNECT,
+        DISCONNECT,
+        SUBSCRIBE,
+        UNSUBSCRIBE
+    }
+
+    /**
      * This method is invoked when an action has completed successfully.
      */
-    fun onSuccess(action: IMqttListener.ACTION)
+    fun onSuccess(action: ACTION)
 
     /**
      * This method is invoked when an action fails.
      */
-    fun onFailure(action: IMqttListener.ACTION, exception: Throwable?)
+    fun onFailure(action: ACTION, exception: Throwable?)
 }

@@ -5,7 +5,7 @@ import org.sheedon.rr.core.EventBehavior
 import java.util.concurrent.Executors
 
 /**
- * mqtt的事件行为服务,将事件放入线程池去执行
+ * The event behavior service of mqtt puts the event into the thread pool for execution
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -13,14 +13,15 @@ import java.util.concurrent.Executors
  */
 class MqttEventBehaviorService : EventBehavior {
 
-    // 线程池处理任务提交/反馈数据，可能是高并发，使用缓存线程池 共用统一个线程池
+    // Thread pool processing tasks submit feedback data,
+    // which may be high concurrency, use cache thread pool to share a unified thread pool
     private val service = Executors.newCachedThreadPool()
 
     /**
-     * 将反馈事件放入 线程池中执行
+     * Put the feedback event into the thread pool for execution
      *
-     * @param requestRunnable Runnable 请求任务
-     * @return 返回true，代表当前以被处理，无需其他事件执行者再去操作
+     * @param requestRunnable Runnable Request task
+     * @return Returns true, which means that it is currently being processed, and no other event executors need to operate it.
      */
     override fun enqueueRequestEvent(requestRunnable: Runnable): Boolean {
         Logger.info("enqueue requestRunnable to RequestEvent by MqttEventBehaviorService")
@@ -29,10 +30,10 @@ class MqttEventBehaviorService : EventBehavior {
     }
 
     /**
-     * 将反馈事件放入 cachedThreadPool 中去并发执行
+     * Put feedback events into cachedThreadPool for concurrent execution
      *
-     * @param callbackRunnable Runnable 反馈任务
-     * @return 返回true，代表当前以被处理，无需其他事件执行者再去操作
+     * @param callbackRunnable Runnable feedback task
+     * @return Returns true, which means that it is currently being processed, and no other event executors need to operate it.
      */
     override fun enqueueCallbackEvent(callbackRunnable: Runnable): Boolean {
         Logger.info("enqueue callbackRunnable to CallbackEvent by MqttEventBehaviorService")

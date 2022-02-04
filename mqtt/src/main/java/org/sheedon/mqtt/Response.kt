@@ -3,7 +3,7 @@ package org.sheedon.mqtt
 import org.sheedon.rr.dispatcher.model.BaseResponse
 
 /**
- * 基础反馈类，需要包含的内容包括「反馈主题」和「反馈消息体」
+ * Basic feedback class, the content to be included includes "feedback subject" and "feedback message body"
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

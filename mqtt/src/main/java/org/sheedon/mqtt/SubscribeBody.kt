@@ -1,7 +1,7 @@
 package org.sheedon.mqtt
 
 /**
- * mqtt订阅主题内容
+ * mqtt subscribes topic content
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

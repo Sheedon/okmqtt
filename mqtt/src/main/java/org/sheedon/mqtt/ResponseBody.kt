@@ -3,8 +3,8 @@ package org.sheedon.mqtt
 import org.eclipse.paho.client.mqttv3.MqttMessage
 
 /**
- * 反馈响应消息体
- * 包含内容，「订阅主题」+「消息内容」+「消息质量」（客户端无用）+「是否保留」（客户端无用）
+ * Response message body Contains content,
+ * "Subscription Topic" + "Message Content" + "Message Quality" (useless for the client) + "reserve" (useless for the client)
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

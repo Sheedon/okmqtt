@@ -3,7 +3,7 @@ package org.sheedon.mqtt
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions
 
 /**
- * mqtt连接选项配置类
+ * mqtt connection options configuration class
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -11,16 +11,16 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions
  */
 internal class DefaultMqttConnectOptions private constructor() : MqttConnectOptions() {
     companion object {
-        private var theOptions: DefaultMqttConnectOptions? = null
         /**
-         * 获取默认值
+         * static Defaults
          *
          * @return MqttConnectOptions
          */
+        private var theOptions: DefaultMqttConnectOptions? = null
         /**
-         * 设置默认值
+         * Set and get default values
          *
-         * @param options 配置类
+         * @return DefaultMqttConnectOptions configuration class
          */
         @JvmStatic
         var default: DefaultMqttConnectOptions?
@@ -37,17 +37,17 @@ internal class DefaultMqttConnectOptions private constructor() : MqttConnectOpti
             }
     }
 
-    // 设置基础值
+    // set base value
     init {
-        // 保持在线间隔30秒
+        // keep online interval 30 seconds
         keepAliveInterval = 30
-        // 连接超时10秒
+        // Connection timed out 10 seconds
         connectionTimeout = 10
-        // 设置最大吞吐量
+        // Set maximum throughput
         maxInflight = 30
-        // 设置清除
+        // setting clear
         isCleanSession = true
-        // 自动连接
+        // auto connect
         isAutomaticReconnect = true
     }
 }

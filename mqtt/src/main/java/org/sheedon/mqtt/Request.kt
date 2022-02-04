@@ -5,7 +5,7 @@ import org.sheedon.rr.dispatcher.model.BaseRequest
 import org.sheedon.rr.dispatcher.model.BaseRequestBuilder
 
 /**
- * 请求对象，包含内容：「反馈主题」+「超时时长」+「请求消息体」
+ * Request object, including content: "back topic" + "timeout duration" + "request message body"
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

@@ -5,7 +5,7 @@ import org.sheedon.rr.core.ResponseAdapter
 import java.nio.charset.Charset
 
 /**
- * mqtt 响应适配器
+ * mqtt response adapter
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -15,6 +15,13 @@ internal class MqttResponseAdapter(val charsetName: String?) :
     ResponseAdapter<String, ResponseBody> {
 
 
+    /**
+     * Build failed response objects from topic and message
+     *
+     * @param topic Feedback Topics
+     * @param message error message
+     * @return Response Response data
+     */
     @Suppress("UNCHECKED_CAST")
     override fun <Response : IResponse<String, ResponseBody>> buildFailure(
         topic: String,
@@ -23,6 +30,13 @@ internal class MqttResponseAdapter(val charsetName: String?) :
         return Response(topic, message) as Response
     }
 
+    /**
+     * Build success response objects from topic and message
+     *
+     * @param topic Feedback Topics
+     * @param body Response data
+     * @return Response Response data
+     */
     @Suppress("UNCHECKED_CAST")
     override fun <Response : IResponse<String, ResponseBody>> buildResponse(
         topic: String,

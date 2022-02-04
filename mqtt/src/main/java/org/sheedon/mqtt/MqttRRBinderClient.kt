@@ -8,7 +8,7 @@ import org.sheedon.rr.timeout.android.TimeOutHandler
 import java.lang.IllegalStateException
 
 /**
- * RequestResponseBinder 请求响应绑定的装饰客户端类
+ * RequestResponseBinder Decorated client class for request-response binding
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -16,27 +16,31 @@ import java.lang.IllegalStateException
  */
 class MqttRRBinderClient constructor(
     builder: Builder
-) : AbstractClient<String/*反馈主题*/, String/*消息ID*/, RequestBody/*请求格式*/, ResponseBody/*反馈格式*/>(
+) : AbstractClient<String/*backTopic*/,
+        String/*message ID*/,
+        RequestBody/*request format*/,
+        ResponseBody/*response body*/>(
     builder
 ) {
 
-    internal val switchMediator: DispatchAdapter<RequestBody, ResponseBody> = builder.loadDispatchAdapter()
+    internal val switchMediator: DispatchAdapter<RequestBody, ResponseBody> =
+        builder.loadDispatchAdapter()
 
     /**
-     * 创建请求响应的Call
+     * Create a call for a request-response
      *
-     * @param request 请求对象
-     * @return Call 用于执行入队/提交请求的动作
+     * @param request request object
+     * @return Call The action used to perform the enqueue submit request
      */
     override fun newCall(request: IRequest<String, RequestBody>): Call {
         return RealCall.newCall(this, request as Request)
     }
 
     /**
-     * 创建信息的观察者 Observable
+     * An observer Observable that creates information
      *
-     * @param request 请求对象
-     * @return Observable 订阅某个主题，监听该主题的消息
+     * @param request request object
+     * @return Observable Subscribe to a topic and listen for messages from that topic
      */
     override fun newObservable(request: IRequest<String, RequestBody>): Observable {
         return RealObserver.newObservable(this, request as Request)
@@ -46,10 +50,10 @@ class MqttRRBinderClient constructor(
     class Builder :
         AbstractClient.Builder<MqttRRBinderClient, String, String, RequestBody, ResponseBody>() {
 
-        // 基础主题 用于主题拼接
+        // Basic theme for theme stitching
         internal var baseTopic: String = ""
 
-        // 字符集编码类型
+        // Character set encoding type
         internal var charsetName: String = "GBK"
 
 
@@ -58,25 +62,28 @@ class MqttRRBinderClient constructor(
         }
 
         /**
-         * 设置基础主题，后续添加的topic 则在此基础上拼接
+         * Set base theme，topic added later, splicing on this basis
          *
-         * @param baseTopic 基础主题
-         * @return Builder 构建者
+         * @param baseTopic base theme
+         * @return Builder builder
          */
         fun baseTopic(baseTopic: String) = apply {
             this.baseTopic = baseTopic
         }
 
         /**
-         * 设置字符集编码类型，在接收数据时转化为指定格式的字符串
+         * Set the character set encoding type and convert it to a string of the specified format when receiving data
          *
-         * @param charsetName 字符集编码类型
-         * @return Builder 构建者
+         * @param charsetName Character set encoding type
+         * @return Builder builder
          */
         fun charsetName(charsetName: String) = apply {
             this.charsetName = charsetName
         }
 
+        /**
+         * Check and bind builds
+         */
         override fun checkAndBind() {
             if (behaviorServices.isEmpty()) {
                 behaviorServices.add(MqttEventBehaviorService())

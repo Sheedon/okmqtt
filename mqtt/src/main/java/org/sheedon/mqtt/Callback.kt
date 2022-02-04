@@ -3,7 +3,7 @@ package org.sheedon.mqtt
 import org.sheedon.rr.core.Callback
 
 /**
- * 回调信息
+ * Callback information
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
