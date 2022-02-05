@@ -31,18 +31,18 @@ class MqttClient {
     private fun createClient() {
 
         // 创建MqttClient
-        val clientId = "yhkhs20181029046" // 设置设备编号
-        val serverUri = "tcp://yanhang.kmdns.net:3883" // 设置服务器地址
+        val clientId = "" // 设置设备编号
+        val serverUri = "" // 设置服务器地址
         val subscribeBodies: MutableList<SubscribeBody> = ArrayList()
         subscribeBodies.add(
             SubscribeBody.build(
-                "yh_classify/clouds/garbage/cmd/LJTF2020072001",
+                "yh_classify/xxxxxxx",
                 1
             )
         ) // 添加需要订阅主题
         subscribeBodies.add(
             SubscribeBody.build(
-                "yh_classify/clouds/recyclable/cmd/yhkhs20181029046",
+                "yh_classify/xxxxxxx",
                 1
             )
         ) // 添加需要订阅主题
@@ -52,7 +52,7 @@ class MqttClient {
             mClient = OkMqttClient.Builder()
                 .clientInfo(App.instance, serverUri, clientId)
                 .subscribeBodies(subscribeBodies = subscribeBodies.toTypedArray())
-                .baseTopic("yh_classify/device/recyclable/data/yhkhs20181029046") // 添加基础主题
+                .baseTopic("yh_classify/xxxxxxx") // 添加基础主题
                 .addBackTopicConverter(CallbackNameConverter(Gson()))
                 .build()
         }
