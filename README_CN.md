@@ -1,15 +1,16 @@
 # MqttDispatcher
 ```tex
-For different mqtt topic messages, implement a scheduling framework for message matching.
+针对于不同 mqtt 主题消息，实现消息匹配的调度框架。
 ```
-[中文文档](README_CN.md)
+[English](README.md)
 
-Send the request message sent by the client and provide feedback monitoring, and send it to the `mqtt server` side with the help of `Mqtt Dispatcher`. After the server receives the request data, it feeds back the request response result, and then `Mqtt Dispatcher` obtains the feedback listener according to the configured feedback topic, and sends the feedback result, so as to realize a complete scheduling of the request response.
+将客户端发送的请求消息，并提供反馈监听，借助 `Mqtt Dispatcher` 发送到 `mqtt server` 端。服务器接收请求数据后，反馈请求响应结果，再由 `Mqtt Dispatcher` 根据配置的 **反馈主题** ，得到反馈监听器，并发送反馈结果，从而实现一次完整的请求响应的调度。
 
 
-## How to use
 
-#### Step 1: Add the JitPack repository to your build file
+## 使用方式
+
+#### 第一步：将 JitPack 存储库添加到您的构建文件中
 
 ```groovy
 allprojects {
@@ -22,7 +23,7 @@ allprojects {
 
 
 
-#### Step 2: Add core dependencies
+#### 第二步：添加核心依赖
 
 ```groovy
 dependencies {
@@ -32,37 +33,37 @@ dependencies {
 
 
 
-#### Step 3: Configure Client
+#### 第三步：配置客户端
 
-The parameters that the mqtt client usually needs to configure are configured as follows. For other parameters, please refer to the source code.
+如下配置了mqtt客户端通常需要配置的参数，其他参数可参考源码。
 
 ```java
 client = OkMqttClient.Builder()
   .clientInfo(context, // content: ApplicationContext
-              serverUri, // serverUri: example tcp://127.0.0.1:3883
-              clientId) // clientId: Client ID
-  .subscribeBodies(subscribeBodies = subscribeBodies.toTypedArray())// Topic to subscribe to
-  .baseTopic("xxx") // Add base subject, Not required
-  .addBackTopicConverter(CallbackNameConverter(Gson()))// Callback Topic Changer
+              serverUri, // serverUri:服务器地址 例如tcp://127.0.0.1:3883
+              clientId) // clientId: 客户端ID
+  .subscribeBodies(subscribeBodies = subscribeBodies.toTypedArray())// 需要订阅的主题
+  .baseTopic("xxx") // 添加基础主题 非必填
+  .addBackTopicConverter(CallbackNameConverter(Gson()))// 反馈主题转换器
   .build()
 ```
 
 
 
-#### Step 4：Build the request and listen for the result
+#### 第四步：构建请求，监听结果
 
-##### Build a single request
+##### 构建一个单一的请求
 
 ```kotlin
-// 1.Build the request object
+// 1.构建请求对象
 val request = Request.Builder()
     .backTopic("get_manager_list")
     .data(jsonObject.toString())
     .build()
 
-// 2.Get Call through the configured client class
+// 2.通过配置的客户端类，来得到Call
 val call = client.newCall(request)
-// 3.Execute request scheduling
+// 3.执行请求调度
 call.enqueue(object :Callback{
     override fun onFailure(e: Throwable) {
         Log.v("TAG", "e:$e")
@@ -74,17 +75,17 @@ call.enqueue(object :Callback{
 })
 ```
 
-##### Build a message subscription
+##### 构建一个消息的订阅
 
 ```kotlin
-// 1.Construct the request object of the subscription message, mainly the subject of the feedback
+// 1.构建订阅消息的请求对象，主要是反馈的主题
 val request: Request = Request.Builder()
     .backTopic("get_manager_list")
     .build()
 
-// 2.Get Observable through the configured client class
+// 2.通过配置的客户端类，来得到Observable
 val observable = client.newObservable(request)
-// 3.execute subscription
+// 3.执行订阅
 observable.subscribe(object : Callback {
     override fun onFailure(e: Throwable) {
         Log.v("TAG", "e:$e")
