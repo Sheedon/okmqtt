@@ -440,7 +440,7 @@ class OkMqttClient internal constructor(
         @JvmOverloads
         fun openStackTrace(isShowStackTrace: Boolean, openRRBindTrace: Boolean = false) = apply {
             Logger.showStackTrace(isShowStackTrace)
-//            this.mqttRRBinderBuilder.openStackTrace(openRRBindTrace)
+            this.mqttRRBinderBuilder.openStackTrace(openRRBindTrace)
         }
 
         /**
