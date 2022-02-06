@@ -43,7 +43,7 @@ open class MqttRequestAdapter(
             data.payload = data.data.toByteArray(Charset.forName(charsetName))
         }
 
-        if (baseTopic.isNotEmpty()) {
+        if (baseTopic.isNotEmpty() && data.isSplice) {
             data.topic = baseTopic + data.topic
         }
         Logger.info("checkRequestData (data is $data)")

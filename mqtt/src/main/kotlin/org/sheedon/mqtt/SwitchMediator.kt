@@ -32,10 +32,8 @@ internal class SwitchMediator internal constructor(
     _requestAdapter: RequestAdapter<RequestBody>? = null
 ) : DispatchAdapter.AbstractDispatchImpl<RequestBody, ResponseBody>() {
 
-    private val charsetName: String = if (_charsetName.isEmpty()) {
+    private val charsetName: String = _charsetName.ifEmpty {
         "UTF-8"
-    } else {
-        _charsetName
     }
     private val requestAdapter: RequestAdapter<RequestBody> =
         _requestAdapter ?: MqttRequestAdapter(_baseTopic, charsetName)
