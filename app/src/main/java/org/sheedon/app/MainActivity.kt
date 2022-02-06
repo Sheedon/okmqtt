@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val request = Request.Builder()
-            .backTopic("get_manager_list")
+            .backTopic("***/get_manager_list")
             .data(jsonObject.toString())
             .build()
 

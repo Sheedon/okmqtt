@@ -27,7 +27,6 @@ import org.sheedon.rr.core.RequestAdapter
  * @Date: 2022/1/30 10:27 上午
  */
 internal class SwitchMediator internal constructor(
-    _baseTopic: String = "",
     _charsetName: String = "UTF-8",
     _requestAdapter: RequestAdapter<RequestBody>? = null
 ) : DispatchAdapter.AbstractDispatchImpl<RequestBody, ResponseBody>() {
@@ -36,7 +35,7 @@ internal class SwitchMediator internal constructor(
         "UTF-8"
     }
     private val requestAdapter: RequestAdapter<RequestBody> =
-        _requestAdapter ?: MqttRequestAdapter(_baseTopic, charsetName)
+        _requestAdapter ?: MqttRequestAdapter(charsetName)
 
     override fun loadRequestAdapter(): RequestAdapter<RequestBody> {
         return requestAdapter

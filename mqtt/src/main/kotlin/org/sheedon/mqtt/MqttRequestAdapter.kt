@@ -27,7 +27,6 @@ import java.nio.charset.Charset
  * @Date: 2022/1/30 2:03 下午
  */
 open class MqttRequestAdapter(
-    val baseTopic: String, // 反馈主题
     val charsetName: String // 编码类型
 ) : RequestAdapter.AbstractRequestImpl<RequestBody>() {
 
@@ -43,9 +42,6 @@ open class MqttRequestAdapter(
             data.payload = data.data.toByteArray(Charset.forName(charsetName))
         }
 
-        if (baseTopic.isNotEmpty() && data.isSplice) {
-            data.topic = baseTopic + data.topic
-        }
         Logger.info("checkRequestData (data is $data)")
         return data
     }

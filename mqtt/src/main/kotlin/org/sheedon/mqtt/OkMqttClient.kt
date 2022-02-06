@@ -192,16 +192,6 @@ class OkMqttClient internal constructor(
         }
 
         /**
-         * 设置基础主题，后续添加的topic 则在此基础上拼接
-         *
-         * @param baseTopic 基础主题
-         * @return Builder 构建者
-         */
-        fun baseTopic(baseTopic: String) = apply {
-            this.mqttRRBinderBuilder.baseTopic(baseTopic)
-        }
-
-        /**
          * 设置字符集编码类型，在接收数据时转化为指定格式的字符串
          *
          * @param charsetName 字符集编码类型

@@ -65,25 +65,12 @@ class MqttRRBinderClient constructor(
     class Builder :
         AbstractClient.Builder<MqttRRBinderClient, String, String, RequestBody, ResponseBody>() {
 
-        // Basic theme for theme stitching
-        internal var baseTopic: String = ""
-
         // Character set encoding type
         internal var charsetName: String = "GBK"
 
 
         internal fun loadDispatchAdapter(): DispatchAdapter<RequestBody, ResponseBody> {
             return dispatchAdapter!!
-        }
-
-        /**
-         * Set base theme，topic added later, splicing on this basis
-         *
-         * @param baseTopic base theme
-         * @return Builder builder
-         */
-        fun baseTopic(baseTopic: String) = apply {
-            this.baseTopic = baseTopic
         }
 
         /**
@@ -110,7 +97,7 @@ class MqttRRBinderClient constructor(
                 timeoutManager = TimeOutHandler()
             }
             if (dispatchAdapter == null) {
-                dispatchAdapter = SwitchMediator(baseTopic, charsetName, requestAdapter)
+                dispatchAdapter = SwitchMediator(charsetName, requestAdapter)
             }
             if (backTopicConverters.isEmpty()) {
                 throw IllegalStateException("backTopicConverter is null.")

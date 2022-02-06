@@ -32,7 +32,6 @@ class RequestBody @JvmOverloads constructor(
     var data: String,
     @IntRange(from = 0, to = 2) qos: Int = 0,
     retained: Boolean = false,
-    var isSplice: Boolean = true,
     charset: String? = null,
     var autoEncode: Boolean = true
 ) : MqttMessage() {
