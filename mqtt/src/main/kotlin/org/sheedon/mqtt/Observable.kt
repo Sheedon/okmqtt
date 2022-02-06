@@ -34,4 +34,7 @@ interface Observable : Observable<String, RequestBody, ResponseBody> {
      */
     fun subscribe(callback: Callback?)
 
+    interface Factory {
+        fun newObservable(request: Request): org.sheedon.mqtt.Observable
+    }
 }

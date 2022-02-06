@@ -34,7 +34,7 @@ import org.sheedon.rr.timeout.TimeoutManager
  */
 class OkMqttClient internal constructor(
     builder: Builder
-) {
+) : Call.Factory, Observable.Factory {
 
     private val mqttRRBinderClient: MqttRRBinderClient = builder.mqttRRBinderClient!!
     val mqttClient: MqttWrapperClient = builder.mqttClient!!
@@ -58,12 +58,32 @@ class OkMqttClient internal constructor(
     }
 
     /**
+     * 创建请求响应的Call
+     *
+     * @param request 请求对象
+     * @return Call 用于执行入队/提交请求的动作
+     */
+    override fun newCall(request: Request): Call {
+        return mqttRRBinderClient.newCall(request)
+    }
+
+    /**
      * 创建信息的观察者 Observable
      *
      * @param request 请求对象
      * @return Observable 订阅某个主题，监听该主题的消息
      */
     fun newObservable(request: IRequest<String, RequestBody>): Observable {
+        return mqttRRBinderClient.newObservable(request)
+    }
+
+    /**
+     * 创建信息的观察者 Observable
+     *
+     * @param request 请求对象
+     * @return Observable 订阅某个主题，监听该主题的消息
+     */
+    override fun newObservable(request: Request): Observable {
         return mqttRRBinderClient.newObservable(request)
     }
 
