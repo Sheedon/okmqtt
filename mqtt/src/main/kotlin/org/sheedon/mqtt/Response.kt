@@ -24,7 +24,7 @@ import org.sheedon.rr.dispatcher.model.BaseResponse
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/30 11:01 上午
  */
-class Response(
+class Response @JvmOverloads constructor(
     backTopic: String? = "",
     message: String? = "",
     body: ResponseBody? = null

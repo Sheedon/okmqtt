@@ -39,6 +39,8 @@ class OkMqttClient internal constructor(
     private val mqttRRBinderClient: MqttRRBinderClient = builder.mqttRRBinderClient!!
     val mqttClient: MqttWrapperClient = builder.mqttClient!!
 
+    constructor() : this(Builder())
+
     init {
         val requestAdapter = mqttRRBinderClient.dispatchManager.requestAdapter()
         requestAdapter!!.bindSender(mqttClient)
