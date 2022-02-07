@@ -1,0 +1,17 @@
+apply plugin: 'maven-publish'
+
+afterEvaluate {
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.release
+
+                // Old artifact coordinates
+                groupId = "com.github.Sheedon"
+                artifactId = "MqttDispatcher"
+                version = "2.0.a-alpha"
+
+            }
+        }
+    }
+}
