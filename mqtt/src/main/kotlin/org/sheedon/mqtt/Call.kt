@@ -35,7 +35,7 @@ interface Call : Call<String, RequestBody, ResponseBody> {
      */
     fun enqueue(callback: Callback?)
 
-    interface Factory {
+    fun interface Factory {
         fun newCall(request: Request): org.sheedon.mqtt.Call
     }
 }
