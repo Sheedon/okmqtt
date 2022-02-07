@@ -16,6 +16,14 @@ android {
         consumerProguardFiles "consumer-rules.pro"
     }
 
+    sourceSets {
+        main {
+            java {
+                java.srcDirs += 'src/main/kotlin'
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
