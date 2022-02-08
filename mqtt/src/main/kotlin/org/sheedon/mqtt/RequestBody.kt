@@ -27,7 +27,7 @@ import java.nio.charset.Charset
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/30 10:58 上午
  */
-class RequestBody @JvmOverloads constructor(
+open class RequestBody @JvmOverloads constructor(
     var topic: String,
     var data: String,
     @IntRange(from = 0, to = 2) qos: Int = 0,

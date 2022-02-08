@@ -42,11 +42,11 @@ class Request internal constructor(
             super.backTopic(backTopic)
         }
 
-        override fun delayMilliSecond(delayMilliSecond: Int) = apply {
+        override fun delayMilliSecond(delayMilliSecond: Long) = apply {
             super.delayMilliSecond(delayMilliSecond)
         }
 
-        override fun delaySecond(delaySecond: Long) = apply {
+        override fun delaySecond(delaySecond: Int) = apply {
             super.delaySecond(delaySecond)
         }
 

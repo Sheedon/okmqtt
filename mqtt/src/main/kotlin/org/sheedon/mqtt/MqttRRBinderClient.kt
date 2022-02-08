@@ -30,7 +30,7 @@ import java.lang.IllegalStateException
  * @Date: 2022/1/30 12:58 下午
  */
 class MqttRRBinderClient constructor(
-    builder: Builder
+    val builder: Builder
 ) : AbstractClient<String/*backTopic*/,
         String/*message ID*/,
         RequestBody/*request format*/,
@@ -40,6 +40,13 @@ class MqttRRBinderClient constructor(
 
     internal val switchMediator: DispatchAdapter<RequestBody, ResponseBody> =
         builder.loadDispatchAdapter()
+
+    /**
+     * 新增默认超时时间方法
+     */
+    internal fun getTimeout():Int{
+        return builder.timeout
+    }
 
     /**
      * Create a call for a request-response

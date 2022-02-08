@@ -50,6 +50,13 @@ class OkMqttClient internal constructor(
     }
 
     /**
+     * 默认超时时间单位（秒）
+     */
+    fun getDefaultTimeout(): Int {
+        return mqttRRBinderClient.getTimeout()
+    }
+
+    /**
      * 创建请求响应的Call
      *
      * @param request 请求对象
