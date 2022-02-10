@@ -55,6 +55,10 @@ class RealObserver(
         )
     }
 
+    override fun <Request : IRequest<String, RequestBody>> request(): Request {
+        return realObserver.request()
+    }
+
     override fun cancel() {
         realObserver.cancel()
     }

@@ -56,6 +56,10 @@ class RealCall(val realCall: RealCall<String, String, RequestBody, ResponseBody>
         realCall.publish()
     }
 
+    override fun <Request : IRequest<String, RequestBody>> request(): Request {
+        return realCall.request()
+    }
+
     override fun isCanceled(): Boolean {
         return realCall.isCanceled()
     }
