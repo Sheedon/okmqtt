@@ -34,7 +34,7 @@ import org.sheedon.rr.timeout.TimeoutManager
  */
 class OkMqttClient internal constructor(
     builder: Builder
-) : Call.Factory, Observable.Factory {
+) : MqttFactory {
 
     private val mqttRRBinderClient: MqttRRBinderClient = builder.mqttRRBinderClient!!
     val mqttClient: MqttWrapperClient = builder.mqttClient!!
