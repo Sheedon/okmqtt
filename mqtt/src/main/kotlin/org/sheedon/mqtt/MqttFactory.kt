@@ -9,9 +9,9 @@ package org.sheedon.mqtt
 interface MqttFactory : CallFactory, ObservableFactory
 
 interface CallFactory {
-    fun newCall(request: Request): org.sheedon.mqtt.Call
+    fun newCall(request: Request): Call
 }
 
 interface ObservableFactory {
-    fun newObservable(request: Request): org.sheedon.mqtt.Observable
+    fun newObservable(request: Request): Observable
 }
