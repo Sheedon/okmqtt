@@ -15,7 +15,7 @@
  */
 package org.sheedon.mqtt
 
-import org.sheedon.rr.dispatcher.model.BaseResponse
+import org.sheedon.rr.core.IResponse
 
 /**
  * Basic feedback class, the content to be included includes "feedback subject" and "feedback message body"
@@ -25,17 +25,21 @@ import org.sheedon.rr.dispatcher.model.BaseResponse
  * @Date: 2022/1/30 11:01 上午
  */
 class Response @JvmOverloads constructor(
-    backTopic: String? = "",
-    message: String? = "",
-    body: ResponseBody? = null
-) : BaseResponse<String, ResponseBody>(backTopic, message, body) {
+    private val backTopic: String? = "",
+    private val message: String? = "",
+    private val body: ResponseBody? = null
+) : IResponse<String, ResponseBody> {
 
     override fun backTopic(): String {
-        return super.backTopic() ?: ""
+        return backTopic ?: ""
     }
 
     override fun message(): String {
-        return super.message() ?: ""
+        return message ?: ""
+    }
+
+    override fun body(): ResponseBody {
+        return body ?: ResponseBody()
     }
 
 }
