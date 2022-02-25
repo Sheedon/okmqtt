@@ -95,7 +95,11 @@ class MqttWrapperClient private constructor(
          */
         override fun onSuccess(asyncActionToken: IMqttToken?) {
             val action =
-                if (mqttClient.isConnected) IActionListener.ACTION.CONNECT else IActionListener.ACTION.DISCONNECT
+                if (mqttClient.isConnected) {
+                    IActionListener.ACTION.CONNECT
+                } else {
+                    IActionListener.ACTION.DISCONNECT
+                }
             connectListener?.onSuccess(action)
             resetStatus()
             autoSubscribe()
@@ -166,6 +170,8 @@ class MqttWrapperClient private constructor(
          * 自动订阅
          * */
         private fun autoSubscribe() {
+
+            if (subscribeBodies.isEmpty()) return
 
             val topic = mutableListOf<String>()
             val qos = mutableListOf<Int>()
