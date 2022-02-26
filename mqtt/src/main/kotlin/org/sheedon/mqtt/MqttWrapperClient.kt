@@ -58,8 +58,8 @@ class MqttWrapperClient private constructor(
     private val connectListener: IActionListener? = builder.connectListener
     private val autoReconnect: Boolean = builder.connectOptions!!.isAutomaticReconnect
 
-    // 主题订阅数据
-    private val subscribeBodies: MutableMap<String, SubscribeBody> = builder.subscribeBodies
+    // 主题通配符过滤器
+    private val wildcardFiller: WildcardFiller = WildcardFiller(builder.subscribeBodies)
 
     // 订阅情况监听器
     private val subscribeListener: IActionListener? = builder.subscribeListener
@@ -171,6 +171,7 @@ class MqttWrapperClient private constructor(
          * */
         private fun autoSubscribe() {
 
+            val subscribeBodies = wildcardFiller.subscribeBodies
             if (subscribeBodies.isEmpty()) return
 
             val topic = mutableListOf<String>()
@@ -339,9 +340,7 @@ class MqttWrapperClient private constructor(
         listener: IResultActionListener? = null
     ) {
         if (attachRecord) {
-            subscribeBodies
-                .takeUnless { subscribeBodies.containsKey(body.convertKey()) }
-                ?.let { it[body.convertKey()] = body }
+            wildcardFiller.subscribe(body)
         }
         mqttClient.subscribe(body.topic, body.qos, null, object : IMqttActionListener {
 
@@ -372,20 +371,15 @@ class MqttWrapperClient private constructor(
         attachRecord: Boolean = false,
         listener: IResultActionListener? = null
     ) {
-        val topic = mutableListOf<String>()
-        val qos = mutableListOf<Int>()
 
-        bodies.forEach { body ->
-            subscribeBodies
-                .also {
-                    topic.add(body.topic!!)
-                    qos.add(body.qos)
-                }
-                .takeIf { attachRecord && !subscribeBodies.containsKey(body.convertKey()) }
-                ?.let {
-                    it[body.convertKey()] = body
-                }
+        val (topic, qos) = wildcardFiller.subscribe(bodies, attachRecord)
+
+        if (topic.isEmpty()) {
+            Logger.info("not topic need subscribe!")
+            listener?.onSuccess()
+            return
         }
+
         mqttClient.subscribe(
             topic.toTypedArray(),
             qos.toIntArray(),
@@ -420,9 +414,7 @@ class MqttWrapperClient private constructor(
         listener: IResultActionListener? = null
     ) {
         if (attachRecord) {
-            subscribeBodies
-                .takeIf { subscribeBodies.containsKey(body.convertKey()) }
-                ?.remove(body.convertKey())
+            wildcardFiller.unsubscribe(body)
         }
         mqttClient.unsubscribe(body.topic, null, object : IMqttActionListener {
 
@@ -453,18 +445,13 @@ class MqttWrapperClient private constructor(
         attachRecord: Boolean = false,
         listener: IResultActionListener? = null
     ) {
-        val topic = mutableListOf<String>()
-        val qos = mutableListOf<Int>()
-
-        bodies.forEach { body ->
-            subscribeBodies
-                .also {
-                    topic.add(body.topic!!)
-                    qos.add(body.qos)
-                }
-                .takeIf { attachRecord && subscribeBodies.containsKey(body.convertKey()) }
-                ?.remove(body.convertKey())
+        val topic = wildcardFiller.unsubscribe(bodies, attachRecord)
+        if (topic.isEmpty()) {
+            Logger.info("not topic need unsubscribe!")
+            listener?.onSuccess()
+            return
         }
+
         mqttClient.unsubscribe(
             topic.toTypedArray(),
             null,
@@ -527,8 +514,9 @@ class MqttWrapperClient private constructor(
         bodies: List<SubscribeBody>,
         listener: IResultActionListener? = null
     ) {
-        val copyBodies: List<SubscribeBody> = subscribeBodies.values.toMutableList()
-        subscribeBodies.clear()
+
+        val copyBodies = wildcardFiller.getSubscribeBodyList()
+        wildcardFiller.clear()
         subscribe(bodies, true, object : IResultActionListener {
             override fun onSuccess() {
                 listener?.onSuccess()
@@ -537,7 +525,7 @@ class MqttWrapperClient private constructor(
             }
 
             override fun onFailure(exception: Throwable?) {
-                subscribeBodies.clear()
+                wildcardFiller.clear()
                 // 重新订阅原来数据
                 subscribe(copyBodies, true)
                 Logger.error("subscribe onFailure", exception)
