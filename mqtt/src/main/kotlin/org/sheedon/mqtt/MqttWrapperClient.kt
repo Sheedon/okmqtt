@@ -59,7 +59,9 @@ class MqttWrapperClient private constructor(
     private val autoReconnect: Boolean = builder.connectOptions!!.isAutomaticReconnect
 
     // 主题通配符过滤器
-    private val wildcardFiller: WildcardFiller = WildcardFiller(builder.subscribeBodies)
+    private val wildcardFiller: WildcardFiller = WildcardFiller(
+        builder.subscribeBodies, builder.subscribeOptimize
+    )
 
     // 订阅情况监听器
     private val subscribeListener: IActionListener? = builder.subscribeListener
@@ -67,6 +69,9 @@ class MqttWrapperClient private constructor(
 
     // 数据交换中介
     internal var switchMediator: DispatchAdapter<RequestBody, ResponseBody>? = null
+
+    // 自动注册主题
+    internal val autoRegister = builder.autoRegister
 
     // 上一次重连时间
     private var lastConnectTime: Long = 0
@@ -340,7 +345,7 @@ class MqttWrapperClient private constructor(
         listener: IResultActionListener? = null
     ) {
         if (attachRecord) {
-            wildcardFiller.subscribe(body)
+            wildcardFiller.subscribe(body,this)
         }
         mqttClient.subscribe(body.topic, body.qos, null, object : IMqttActionListener {
 
@@ -372,7 +377,7 @@ class MqttWrapperClient private constructor(
         listener: IResultActionListener? = null
     ) {
 
-        val (topic, qos) = wildcardFiller.subscribe(bodies, attachRecord)
+        val (topic, qos) = wildcardFiller.subscribe(bodies, attachRecord,this)
 
         if (topic.isEmpty()) {
             Logger.info("not topic need subscribe!")
@@ -414,7 +419,7 @@ class MqttWrapperClient private constructor(
         listener: IResultActionListener? = null
     ) {
         if (attachRecord) {
-            wildcardFiller.unsubscribe(body)
+            wildcardFiller.unsubscribe(body,this)
         }
         mqttClient.unsubscribe(body.topic, null, object : IMqttActionListener {
 
@@ -445,7 +450,7 @@ class MqttWrapperClient private constructor(
         attachRecord: Boolean = false,
         listener: IResultActionListener? = null
     ) {
-        val topic = wildcardFiller.unsubscribe(bodies, attachRecord)
+        val topic = wildcardFiller.unsubscribe(bodies, attachRecord,this)
         if (topic.isEmpty()) {
             Logger.info("not topic need unsubscribe!")
             listener?.onSuccess()
@@ -584,8 +589,15 @@ class MqttWrapperClient private constructor(
         // 订阅情况监听器
         internal var subscribeListener: IActionListener? = null
 
+        // 是否启动订阅优化
+        internal var subscribeOptimize: Boolean = false
+
         // 在重新连接后，是否自动订阅
         internal var autoSubscribe: Boolean = false
+
+        // 自动注册需要订阅主题,请求或订阅消息，若该消息不在订阅集合中，则自动添加订阅
+        // 注意：backTopic 必须是完整订阅的主题，并且不能是消息体「请求类型」的一部分
+        internal var autoRegister: Boolean = false
 
         init {
             connectOptions = DefaultMqttConnectOptions.default
@@ -698,6 +710,29 @@ class MqttWrapperClient private constructor(
             }
             this.subscribeListener = subscribeListener
             this.autoSubscribe = autoSubscribe
+        }
+
+        /**
+         * Whether to activate subscription optimization.
+         * After subscription optimization is activated,
+         * inclusive subscriptions will no longer be repeated subscriptions
+         * For example：A/B/C/# and A/B/C/+ and A/B/C/D，
+         * it will subscribe only A/B/C/# ，However,
+         * the linked list of records will store the above three subscription information
+         */
+        fun subscribeOptimize(subscribeOptimize: Boolean) = apply {
+            this.subscribeOptimize = subscribeOptimize
+        }
+
+        /**
+         * Automatic registration requires subscription topics,requests or subscription messages.
+         * If the message is not in the subscription collection,
+         * the subscription will be automatically added
+         * Note: backTopic must be a fully subscribed topic
+         * and cannot be part of the message body "mqttMessage"
+         */
+        fun autoRegister(autoRegister: Boolean) = apply {
+            this.autoRegister = autoRegister
         }
 
         /**
