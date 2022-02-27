@@ -478,6 +478,29 @@ class OkMqttClient internal constructor(
         }
 
         /**
+         * Whether to activate subscription optimization.
+         * After subscription optimization is activated,
+         * inclusive subscriptions will no longer be repeated subscriptions
+         * For example：A/B/C/# and A/B/C/+ and A/B/C/D，
+         * it will subscribe only A/B/C/# ，However,
+         * the linked list of records will store the above three subscription information
+         */
+        fun subscribeOptimize(subscribeOptimize: Boolean) = apply {
+            this.mqttBuilder.subscribeOptimize(subscribeOptimize)
+        }
+
+        /**
+         * Automatic registration requires subscription topics,requests or subscription messages.
+         * If the message is not in the subscription collection,
+         * the subscription will be automatically added
+         * Note: backTopic must be a fully subscribed topic
+         * and cannot be part of the message body "mqttMessage"
+         */
+        fun autoRegister(autoRegister: Boolean) = apply {
+            this.mqttBuilder.autoRegister(autoRegister)
+        }
+
+        /**
          * 配置自定义的Logger
          *
          * @param logger Logger
