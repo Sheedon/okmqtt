@@ -16,6 +16,44 @@ class SubscribePool {
 
     // 根节点
     val rootNote: ObservableNote = ObservableNote(ROOT_NAME)
+    val systemRootNote: ObservableNote = ObservableNote(ROOT_NAME)
+
+    // 优先存在#，都存在按/个数由少到多排序，否则根据存在+，按/个数由少到多排序
+    val sortCondition = Comparator<String> { condition1, condition2 ->
+        val o1End = condition1.endsWith("#")
+        val o2End = condition2.endsWith("#")
+        compareProcess(
+            o1End, o2End,
+            compareCount(condition1, condition2),
+            sortPlusSign(condition1, condition2)
+        )
+    }
+
+    /**
+     * 添加一个订阅路径
+     * @param paths 需要订阅的路径集合
+     * @return 包含实际需要订阅的路径集合，和取消订阅的路径集合
+     */
+    fun push(paths: List<String>): Pair<Set<String>, Set<String>> {
+        val addArray = mutableSetOf<String>()
+        val removeArray = mutableSetOf<String>()
+        val targetList = paths.sortedWith(sortCondition)
+        targetList.forEach { path ->
+            if (path.isEmpty()) {
+                return@forEach
+            }
+            push(path).also { pair ->
+                pair.first?.let {
+                    addArray.add(it)
+                }
+                removeArray.addAll(pair.second)
+            }
+        }
+
+        // 一般不存在重复
+        addArray.removeAll(removeArray)
+        return Pair(addArray, removeArray)
+    }
 
     /**
      * 添加一个订阅路径
@@ -33,7 +71,7 @@ class SubscribePool {
         // 按/分割字符串
         val noteArray = path.split(REGEX)
         // 当前路径
-        var currentNote = rootNote
+        var currentNote = loadRootNote(path)
         // 用于记录多级#，是否需要新增订阅
         var needAddSubscribe = true
         // 完整路径名
@@ -109,8 +147,37 @@ class SubscribePool {
     }
 
     /**
+     * 移除一个订阅路径集合
+     * @param paths 需要取消订阅的路径集合
+     * @return 包含实际需要订阅的路径集合，和取消订阅的路径集合
+     */
+    fun pop(paths: List<String>): Pair<Set<String>, Set<String>> {
+        val addArray = mutableSetOf<String>()
+        val removeArray = mutableSetOf<String>()
+        val targetList = paths.sortedWith(sortCondition)
+        // 排序翻转
+        targetList.reversed()
+
+        targetList.forEach { path ->
+            if (path.isEmpty()) {
+                return@forEach
+            }
+            pop(path).also { pair ->
+                addArray.addAll(pair.first)
+                pair.second?.let {
+                    removeArray.add(it)
+                }
+            }
+        }
+
+        // 一般不存在重复
+        removeArray.removeAll(addArray)
+        return Pair(addArray, removeArray)
+    }
+
+    /**
      * 移除一个订阅路径
-     * @param path 需要订阅的路径
+     * @param path 需要取消订阅的路径
      * @return 包含实际需要订阅的路径，和取消订阅的路径集合
      */
     fun pop(path: String): Pair<Set<String>, String?> {
@@ -124,7 +191,7 @@ class SubscribePool {
         // 按/分割字符串
         val noteArray = path.split(REGEX)
         // 当前路径
-        var currentNote = rootNote
+        var currentNote = loadRootNote(path)
         // 完整路径名
         val pathName = StringBuilder()
 
@@ -185,5 +252,69 @@ class SubscribePool {
         return Pair(addArray, removePath)
     }
 
+    /**
+     * 获取根节点
+     */
+    private fun loadRootNote(path: String): ObservableNote {
+        return if (path.startsWith("\$SYS")) {
+            systemRootNote
+        } else {
+            rootNote
+        }
+    }
+
+    /**
+     * 比较+号
+     */
+    private fun sortPlusSign(str1: String, str2: String): () -> Int {
+        val o1End = str1.endsWith("+")
+        val o2End = str2.endsWith("+")
+
+        return {
+            compareProcess(
+                o1End, o2End,
+                compareCount(str1, str2)
+            ) { 0 }
+        }
+
+    }
+
+    /**
+     * 比较流程规范
+     * @param condition1 比较条件1
+     * @param condition2 比较条件2
+     * @param conformityFun 比较条件1/比较条件2 都符合情况下执行
+     * @param nonConformityFun 比较条件1/比较条件2 都不符合条件下执行
+     *
+     */
+    private fun compareProcess(
+        condition1: Boolean,
+        condition2: Boolean,
+        conformityFun: () -> Int,
+        nonConformityFun: () -> Int
+    ): Int {
+        return if (condition1 && condition2) {
+            conformityFun()
+        } else if (condition1) {
+            -1
+        } else if (condition2) {
+            1
+        } else {
+            nonConformityFun()
+        }
+    }
+
+    /**
+     * 比较个数
+     */
+    private fun compareCount(str1: String, str2: String): () -> Int {
+        return {
+            str1.count {
+                it == '/'
+            } - str2.count {
+                it == '/'
+            }
+        }
+    }
 
 }
