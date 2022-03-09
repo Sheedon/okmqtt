@@ -9,11 +9,11 @@ package org.sheedon.mqtt
  * @Date: 2022/2/25 5:58 下午
  */
 internal class WildcardFiller @JvmOverloads constructor(
-    var subscribeBodies: MutableMap<String, SubscribeBody> = mutableMapOf(),
+    var subscribeBodies: MutableMap<String, Subscribe> = mutableMapOf(),
     val subscribeOptimize: Boolean = false
 ) {
 
-    private val fillerBodies: MutableMap<String, SubscribeBody> = mutableMapOf()
+    private val fillerBodies: MutableMap<String, Subscribe> = mutableMapOf()
     private val rootNote = SubscribeNote("root")
 
     /**
@@ -21,14 +21,14 @@ internal class WildcardFiller @JvmOverloads constructor(
      *
      * @param body 单项订阅内容
      */
-    internal fun subscribe(body: SubscribeBody, client: MqttWrapperClient) {
+    internal fun subscribe(body: Subscribe, client: MqttWrapperClient) {
         subscribeBodies
             .takeUnless {
                 subscribeBodies.containsKey(body.convertKey()) || !needSubscribe(body)
             }?.let {
                 it[body.convertKey()] = body
             }?.also {
-                var filter: Set<SubscribeBody> = emptySet()
+                var filter: Set<Subscribe> = emptySet()
                 body.topic?.also {
                     if (it.endsWith("#")) {
                         filter = filterByWildcard1(it)
@@ -50,14 +50,14 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param attachRecord 是否附加到记录中
      */
     internal fun subscribe(
-        bodies: List<SubscribeBody>,
+        bodies: List<Subscribe>,
         attachRecord: Boolean = false,
         client: MqttWrapperClient
     ): Pair<List<String>, List<Int>> {
 
         val topic = mutableListOf<String>()
         val qos = mutableListOf<Int>()
-        val filter: MutableSet<SubscribeBody> = mutableSetOf()
+        val filter: MutableSet<Subscribe> = mutableSetOf()
 
         bodies.forEach { body ->
             subscribeBodies.takeIf {
@@ -93,9 +93,9 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 过滤通配符「#」
      * 当新增的主题后缀为#，要过滤能用该通配符匹配的主题
      */
-    private fun filterByWildcard1(topic: String): MutableSet<SubscribeBody> {
+    private fun filterByWildcard1(topic: String): MutableSet<Subscribe> {
         val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<SubscribeBody>()
+        val result = mutableSetOf<Subscribe>()
 
         val iterator = subscribeBodies.keys.iterator()
         while (iterator.hasNext()) {
@@ -119,9 +119,9 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 过滤通配符「+」
      * 当新增的主题后缀为+，要过滤能用该通配符匹配的主题
      */
-    private fun filterByWildcard2(topic: String): MutableSet<SubscribeBody> {
+    private fun filterByWildcard2(topic: String): MutableSet<Subscribe> {
         val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<SubscribeBody>()
+        val result = mutableSetOf<Subscribe>()
 
         val iterator = subscribeBodies.keys.iterator()
         val length = topic.length
@@ -149,10 +149,10 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param body 单项订阅内容
      */
     internal fun unsubscribe(
-        body: SubscribeBody,
+        body: Subscribe,
         client: MqttWrapperClient
     ) {
-        var filter: MutableSet<SubscribeBody> = mutableSetOf()
+        var filter: MutableSet<Subscribe> = mutableSetOf()
 
         subscribeBodies
             .takeIf {
@@ -189,14 +189,14 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param attachRecord 是否附加到记录中
      */
     internal fun unsubscribe(
-        bodies: List<SubscribeBody>,
+        bodies: List<Subscribe>,
         attachRecord: Boolean = false,
         client: MqttWrapperClient
     ): List<String> {
 
         val topic = mutableListOf<String>()
         val qos = mutableListOf<Int>()
-        val filter: MutableSet<SubscribeBody> = mutableSetOf()
+        val filter: MutableSet<Subscribe> = mutableSetOf()
 
         bodies.forEach { body ->
             subscribeBodies
@@ -238,9 +238,9 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 过滤通配符「#」
      * 当新增的主题后缀为#，要过滤能用该通配符匹配的主题
      */
-    private fun appendTopic1(topic: String): MutableSet<SubscribeBody> {
+    private fun appendTopic1(topic: String): MutableSet<Subscribe> {
         val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<SubscribeBody>()
+        val result = mutableSetOf<Subscribe>()
 
         val iterator = fillerBodies.keys.iterator()
         while (iterator.hasNext()) {
@@ -259,9 +259,9 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 过滤通配符「+」
      * 当新增的主题后缀为+，要过滤能用该通配符匹配的主题
      */
-    private fun appendTopic2(topic: String): MutableSet<SubscribeBody> {
+    private fun appendTopic2(topic: String): MutableSet<Subscribe> {
         val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<SubscribeBody>()
+        val result = mutableSetOf<Subscribe>()
 
         val iterator = fillerBodies.keys.iterator()
         val length = topic.length
@@ -282,7 +282,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param body 订阅主题
      * @return true:需要订阅，false:无需订阅
      */
-    private fun needSubscribe(body: SubscribeBody): Boolean {
+    private fun needSubscribe(body: Subscribe): Boolean {
         if (!subscribeOptimize) return true
 
         var needAddSubscribe = true
@@ -316,7 +316,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param body 订阅主题
      * @return true:需要取消订阅，false:无需取消订阅
      */
-    private fun needUnsubscribe(body: SubscribeBody) {
+    private fun needUnsubscribe(body: Subscribe) {
         if (!subscribeOptimize) return
 
         val array = body.topic?.split("/") ?: arrayListOf()
@@ -339,7 +339,7 @@ internal class WildcardFiller @JvmOverloads constructor(
     /**
      * 获取订阅主题内容集合
      */
-    internal fun getSubscribeBodyList(): List<SubscribeBody> {
+    internal fun getSubscribeBodyList(): List<Subscribe> {
         return subscribeBodies.values.toMutableList()
     }
 
