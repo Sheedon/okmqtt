@@ -11,12 +11,12 @@ import kotlin.collections.ArrayList
  * @Date: 2022/3/7 10:52 下午
  */
 class Relation private constructor(
-    @get:JvmName("subscribeArray") val subscribeArray: Array<Subscribe>? = null,// 需要订阅的集合
+    @get:JvmName("subscribeArray") val subscribeArray: Array<Subscribe>,// 需要订阅的集合
 ) {
 
     fun newBuilder(): Builder {
         val result = Builder()
-        result.subscribeArray.addAll(subscribeArray ?: arrayOf())
+        result.subscribeArray += subscribeArray
         return result
     }
 
@@ -30,10 +30,6 @@ class Relation private constructor(
 
     override fun toString(): String {
         return buildString {
-            if (subscribeArray == null) {
-                append("subscribeArray == null")
-                return@buildString
-            }
             subscribeArray.forEachIndexed { index, subscribe ->
                 if (index > 0) {
                     append(", ")

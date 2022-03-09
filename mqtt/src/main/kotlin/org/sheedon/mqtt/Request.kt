@@ -30,12 +30,16 @@ class Request internal constructor(
     builder: Builder
 ) : BaseRequest<String, RequestBody>(builder) {
 
+    // 关联
+    @get:JvmName("relation")
+    val relation: Relation = builder.relation.build()
+
     open class Builder : BaseRequestBuilder<Request, String, RequestBody>() {
         internal var topic: String = ""
         internal var data: String = ""
         internal var qos: Int = 0
         internal var retained: Boolean = false
-
+        internal var relation: Relation.Builder = Relation.Builder()
 
 
         override fun backTopic(backTopic: String) = apply {
@@ -48,6 +52,18 @@ class Request internal constructor(
 
         override fun delaySecond(delaySecond: Int) = apply {
             super.delaySecond(delaySecond)
+        }
+
+        open fun relation(relationBuilder: Relation.Builder) = apply {
+            relation = relationBuilder
+        }
+
+        open fun addAllSubscribe(subscribeArray: MutableList<Subscribe>) = apply {
+            relation.addAll(subscribeArray)
+        }
+
+        open fun addSubscribe(subscribe: Subscribe) = apply {
+            relation.add(subscribe)
         }
 
         override fun body(body: RequestBody?) = apply {
