@@ -183,7 +183,7 @@ class MqttWrapperClient private constructor(
             val qos = mutableListOf<Int>()
 
             subscribeBodies.forEach { (_, value) ->
-                topic.add(value.topic!!)
+                topic.add(value.topic)
                 qos.add(value.qos)
             }
             mqttClient.subscribe(topic.toTypedArray(), qos.toIntArray())
@@ -227,7 +227,7 @@ class MqttWrapperClient private constructor(
     /**
      * mqtt 创建连接
      */
-    private fun connect(listener: IResultActionListener? = null) {
+    private fun connect(listener: IMqttActionListener? = null) {
         synchronized(lock) {
             if (mqttClient.isConnected || isStartConnect) {
                 return
@@ -243,7 +243,7 @@ class MqttWrapperClient private constructor(
      */
     @JvmOverloads
     fun reConnect(
-        listener: IResultActionListener? = null
+        listener: IMqttActionListener? = null
     ) {
         val nowTime = System.currentTimeMillis()
         if (nowTime - lastConnectTime < EXECUTE_INTERVAL) {
@@ -265,7 +265,7 @@ class MqttWrapperClient private constructor(
     /**
      * mqtt 断开连接
      */
-    private fun disconnect(listener: IResultActionListener? = null) {
+    private fun disconnect(listener: IMqttActionListener? = null) {
         synchronized(lock) {
             if (!mqttClient.isConnected && isStartDisconnect) {
                 Logger.error("disconnect isConnected = $mqttClient.isConnected, isStartDisconnect = $isStartDisconnect")
@@ -279,7 +279,7 @@ class MqttWrapperClient private constructor(
     }
 
     @JvmOverloads
-    fun disConnect(listener: IResultActionListener? = null) {
+    fun disConnect(listener: IMqttActionListener? = null) {
         val nowTime = System.currentTimeMillis()
         if (nowTime - lastDisconnectTime < EXECUTE_INTERVAL) {
             isStartDisconnect = false
@@ -301,7 +301,7 @@ class MqttWrapperClient private constructor(
      * 创建连接和断开的监听器
      */
     private fun createConnectListener(
-        listener: IResultActionListener?,
+        listener: IMqttActionListener?,
         action: IActionListener.ACTION
     ): IMqttActionListener {
         return if (listener == null) {
@@ -321,12 +321,12 @@ class MqttWrapperClient private constructor(
      * @param throwable 错误信息
      * */
     private fun failureAction(
-        resultActionListener: IResultActionListener? = null,
+        resultActionListener: IMqttActionListener? = null,
         actionCallback: IActionListener? = null,
         action: IActionListener.ACTION,
         throwable: Throwable
     ) {
-        resultActionListener?.onFailure(throwable)
+        resultActionListener?.onFailure(null, throwable)
         actionCallback?.onFailure(action, throwable)
         Logger.error("failure action", throwable)
     }
@@ -335,28 +335,27 @@ class MqttWrapperClient private constructor(
     /**
      * 订阅mqtt主题
      * @param body mqtt消息体
-     * @param attachRecord 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
      * @param listener 操作监听器
      */
     @JvmOverloads
     fun subscribe(
-        body: SubscribeBody,
-        attachRecord: Boolean = false,
-        listener: IResultActionListener? = null
+        body: Subscribe,
+        listener: IMqttActionListener? = null
     ) {
-        if (attachRecord) {
-            wildcardFiller.subscribe(body,this)
+        // 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
+        if (body.attachRecord) {
+            wildcardFiller.subscribe(body, this)
         }
         mqttClient.subscribe(body.topic, body.qos, null, object : IMqttActionListener {
 
             override fun onSuccess(asyncActionToken: IMqttToken?) {
-                listener?.onSuccess()
+                listener?.onSuccess(asyncActionToken)
                 Logger.info("subscribe onSuccess")
                 subscribeListener?.onSuccess(IActionListener.ACTION.SUBSCRIBE)
             }
 
             override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                listener?.onFailure(exception)
+                listener?.onFailure(asyncActionToken, exception)
                 Logger.error("subscribe onFailure", exception)
                 subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
             }
@@ -367,21 +366,19 @@ class MqttWrapperClient private constructor(
     /**
      * 订阅mqtt主题
      * @param bodies mqtt消息体集合
-     * @param attachRecord 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
      * @param listener 操作监听器
      */
     @JvmOverloads
     fun subscribe(
-        bodies: List<SubscribeBody>,
-        attachRecord: Boolean = false,
-        listener: IResultActionListener? = null
+        bodies: List<Subscribe>,
+        listener: IMqttActionListener? = null
     ) {
 
-        val (topic, qos) = wildcardFiller.subscribe(bodies, attachRecord,this)
+        val (topic, qos) = wildcardFiller.subscribe(bodies, this)
 
         if (topic.isEmpty()) {
             Logger.info("not topic need subscribe!")
-            listener?.onSuccess()
+            listener?.onSuccess(null)
             return
         }
 
@@ -392,13 +389,13 @@ class MqttWrapperClient private constructor(
             object : IMqttActionListener {
 
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
-                    listener?.onSuccess()
+                    listener?.onSuccess(asyncActionToken)
                     Logger.info("subscribe onSuccess")
                     subscribeListener?.onSuccess(IActionListener.ACTION.SUBSCRIBE)
                 }
 
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                    listener?.onFailure(exception)
+                    listener?.onFailure(asyncActionToken, exception)
                     Logger.error("subscribe onFailure", exception)
                     subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
                 }
@@ -409,28 +406,27 @@ class MqttWrapperClient private constructor(
     /**
      * 取消订阅mqtt主题
      * @param body mqtt消息体
-     * @param attachRecord 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
      * @param listener 操作监听器
      */
     @JvmOverloads
     fun unsubscribe(
-        body: SubscribeBody,
-        attachRecord: Boolean = false,
-        listener: IResultActionListener? = null
+        body: Subscribe,
+        listener: IMqttActionListener? = null
     ) {
-        if (attachRecord) {
-            wildcardFiller.unsubscribe(body,this)
+        if (body.attachRecord) {
+            //是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
+            wildcardFiller.unsubscribe(body, this)
         }
         mqttClient.unsubscribe(body.topic, null, object : IMqttActionListener {
 
             override fun onSuccess(asyncActionToken: IMqttToken?) {
-                listener?.onSuccess()
+                listener?.onSuccess(asyncActionToken)
                 Logger.info("unsubscribe onSuccess")
                 subscribeListener?.onSuccess(IActionListener.ACTION.UNSUBSCRIBE)
             }
 
             override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                listener?.onFailure(exception)
+                listener?.onFailure(asyncActionToken, exception)
                 Logger.error("unsubscribe onFailure", exception)
                 subscribeListener?.onFailure(IActionListener.ACTION.UNSUBSCRIBE, exception)
             }
@@ -441,19 +437,17 @@ class MqttWrapperClient private constructor(
     /**
      * 取消订阅mqtt主题
      * @param bodies mqtt消息体集合
-     * @param attachRecord 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
-     * @param listener 操作监听器
+     *  @param listener 操作监听器
      */
     @JvmOverloads
     fun unsubscribe(
-        bodies: List<SubscribeBody>,
-        attachRecord: Boolean = false,
-        listener: IResultActionListener? = null
+        bodies: List<Subscribe>,
+        listener: IMqttActionListener? = null
     ) {
-        val topic = wildcardFiller.unsubscribe(bodies, attachRecord,this)
+        val topic = wildcardFiller.unsubscribe(bodies, this)
         if (topic.isEmpty()) {
             Logger.info("not topic need unsubscribe!")
-            listener?.onSuccess()
+            listener?.onSuccess(null)
             return
         }
 
@@ -463,13 +457,13 @@ class MqttWrapperClient private constructor(
             object : IMqttActionListener {
 
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
-                    listener?.onSuccess()
+                    listener?.onSuccess(asyncActionToken)
                     Logger.info("unsubscribe onSuccess")
                     subscribeListener?.onSuccess(IActionListener.ACTION.UNSUBSCRIBE)
                 }
 
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                    listener?.onFailure(exception)
+                    listener?.onFailure(asyncActionToken, exception)
                     Logger.error("unsubscribe onFailure", exception)
                     subscribeListener?.onFailure(IActionListener.ACTION.UNSUBSCRIBE, exception)
                 }
@@ -490,17 +484,17 @@ class MqttWrapperClient private constructor(
      */
     @JvmOverloads
     fun reSubscribe(
-        bodies: List<SubscribeBody>,
-        listener: IResultActionListener? = null
+        bodies: List<Subscribe>,
+        listener: IMqttActionListener? = null
     ) {
-        unsubscribe(bodies, false, object : IResultActionListener {
-            override fun onSuccess() {
+        unsubscribe(bodies, object : IMqttActionListener {
+            override fun onSuccess(asyncActionToken: IMqttToken?) {
                 Logger.info("unsubscribe onSuccess")
                 reSubscribeBySuccess(bodies, listener)
             }
 
-            override fun onFailure(exception: Throwable?) {
-                listener?.onFailure(exception)
+            override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+                listener?.onFailure(asyncActionToken, exception)
                 Logger.error("unsubscribe onFailure", exception)
                 subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
             }
@@ -516,25 +510,25 @@ class MqttWrapperClient private constructor(
      * @param listener 操作监听器
      */
     private fun reSubscribeBySuccess(
-        bodies: List<SubscribeBody>,
-        listener: IResultActionListener? = null
+        bodies: List<Subscribe>,
+        listener: IMqttActionListener? = null
     ) {
 
         val copyBodies = wildcardFiller.getSubscribeBodyList()
         wildcardFiller.clear()
-        subscribe(bodies, true, object : IResultActionListener {
-            override fun onSuccess() {
-                listener?.onSuccess()
+        subscribe(bodies, object : IMqttActionListener {
+            override fun onSuccess(asyncActionToken: IMqttToken?) {
+                listener?.onSuccess(asyncActionToken)
                 Logger.info("subscribe onSuccess")
                 subscribeListener?.onSuccess(IActionListener.ACTION.SUBSCRIBE)
             }
 
-            override fun onFailure(exception: Throwable?) {
+            override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
                 wildcardFiller.clear()
                 // 重新订阅原来数据
-                subscribe(copyBodies, true)
+                subscribe(copyBodies)
                 Logger.error("subscribe onFailure", exception)
-                listener?.onFailure(exception)
+                listener?.onFailure(asyncActionToken, exception)
                 subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
             }
 
@@ -584,7 +578,7 @@ class MqttWrapperClient private constructor(
         internal var connectListener: IActionListener? = null
 
         // 订阅信息
-        internal var subscribeBodies = mutableMapOf<String, SubscribeBody>()
+        internal var subscribeBodies = mutableMapOf<String, Subscribe>()
 
         // 订阅情况监听器
         internal var subscribeListener: IActionListener? = null
@@ -702,7 +696,7 @@ class MqttWrapperClient private constructor(
         fun subscribeBodies(
             subscribeListener: IActionListener? = null,
             autoSubscribe: Boolean = false,
-            vararg subscribeBodies: SubscribeBody
+            vararg subscribeBodies: Subscribe
         ) = apply {
             this.subscribeBodies.clear()
             subscribeBodies.forEach {

@@ -82,7 +82,7 @@ class OkMqttClient internal constructor(
      * @param request 请求对象
      * @return Observable 订阅某个主题，监听该主题的消息
      */
-    fun newObservable(request: IRequest<String, RequestBody>): Observable {
+    fun newObservable(request: IRequest<String, RequestBody>): Listener {
         return mqttRRBinderClient.newObservable(request)
     }
 
@@ -92,7 +92,7 @@ class OkMqttClient internal constructor(
      * @param request 请求对象
      * @return Observable 订阅某个主题，监听该主题的消息
      */
-    override fun newObservable(request: Request): Observable {
+    override fun newObservable(request: Request): Listener {
         return mqttRRBinderClient.newObservable(request)
     }
 
@@ -101,13 +101,13 @@ class OkMqttClient internal constructor(
      */
     @JvmOverloads
     fun reConnect(
-        listener: IResultActionListener? = null
+        listener: IMqttActionListener? = null
     ) {
         this.mqttClient.reConnect(listener)
     }
 
     @JvmOverloads
-    fun disConnect(listener: IResultActionListener? = null) {
+    fun disConnect(listener: IMqttActionListener? = null) {
         this.mqttClient.disConnect(listener)
     }
 
@@ -115,61 +115,53 @@ class OkMqttClient internal constructor(
     /**
      * 订阅mqtt主题
      * @param body mqtt消息体
-     * @param attachRecord 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
      * @param listener 操作监听器
      */
     @JvmOverloads
     fun subscribe(
-        body: SubscribeBody,
-        attachRecord: Boolean = false,
-        listener: IResultActionListener? = null
+        body: Subscribe,
+        listener: IMqttActionListener? = null
     ) {
-        this.mqttClient.subscribe(body, attachRecord, listener)
+        this.mqttClient.subscribe(body, listener)
     }
 
     /**
      * 订阅mqtt主题
      * @param bodies mqtt消息体集合
-     * @param attachRecord 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
      * @param listener 操作监听器
      */
     @JvmOverloads
     fun subscribe(
-        bodies: List<SubscribeBody>,
-        attachRecord: Boolean = false,
-        listener: IResultActionListener? = null
+        bodies: List<Subscribe>,
+        listener: IMqttActionListener? = null
     ) {
-        this.mqttClient.subscribe(bodies, attachRecord, listener)
+        this.mqttClient.subscribe(bodies, listener)
     }
 
     /**
      * 取消订阅mqtt主题
      * @param body mqtt消息体
-     * @param attachRecord 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
      * @param listener 操作监听器
      */
     @JvmOverloads
     fun unsubscribe(
-        body: SubscribeBody,
-        attachRecord: Boolean = false,
-        listener: IResultActionListener? = null
+        body: Subscribe,
+        listener: IMqttActionListener? = null
     ) {
-        this.mqttClient.unsubscribe(body, attachRecord, listener)
+        this.mqttClient.unsubscribe(body, listener)
     }
 
     /**
      * 取消订阅mqtt主题
      * @param bodies mqtt消息体集合
-     * @param attachRecord 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
      * @param listener 操作监听器
      */
     @JvmOverloads
     fun unsubscribe(
-        bodies: List<SubscribeBody>,
-        attachRecord: Boolean = false,
-        listener: IResultActionListener? = null
+        bodies: List<Subscribe>,
+        listener: IMqttActionListener? = null
     ) {
-        this.mqttClient.unsubscribe(bodies, attachRecord, listener)
+        this.mqttClient.unsubscribe(bodies, listener)
     }
 
     /**
@@ -180,8 +172,8 @@ class OkMqttClient internal constructor(
      */
     @JvmOverloads
     fun reSubscribe(
-        bodies: List<SubscribeBody>,
-        listener: IResultActionListener? = null
+        bodies: List<Subscribe>,
+        listener: IMqttActionListener? = null
     ) {
         this.mqttClient.reSubscribe(bodies, listener)
     }
@@ -448,7 +440,7 @@ class OkMqttClient internal constructor(
         fun subscribeBodies(
             subscribeListener: IActionListener? = null,
             autoSubscribe: Boolean = false,
-            vararg subscribeBodies: SubscribeBody
+            vararg subscribeBodies: Subscribe
         ) = apply {
             this.mqttBuilder.subscribeBodies(subscribeListener, autoSubscribe, *subscribeBodies)
         }

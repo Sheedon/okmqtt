@@ -27,7 +27,7 @@ import org.eclipse.paho.client.mqttv3.IMqttToken
  */
 class RealCallbackListener(
     val callbackListener: IActionListener?,
-    val actionListener: IResultActionListener?,
+    val actionListener: IMqttActionListener?,
     val action: IActionListener.ACTION
 ) : IMqttActionListener {
 
@@ -39,7 +39,7 @@ class RealCallbackListener(
      */
     override fun onSuccess(asyncActionToken: IMqttToken?) {
         callbackListener?.onSuccess(action)
-        actionListener?.onSuccess()
+        actionListener?.onSuccess(asyncActionToken)
     }
 
     /**
@@ -51,6 +51,6 @@ class RealCallbackListener(
      */
     override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
         callbackListener?.onFailure(action, exception)
-        actionListener?.onFailure(exception)
+        actionListener?.onFailure(asyncActionToken, exception)
     }
 }

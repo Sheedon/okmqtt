@@ -64,8 +64,8 @@ class MqttRRBinderClient constructor(
      * @param request request object
      * @return Observable Subscribe to a topic and listen for messages from that topic
      */
-    override fun newObservable(request: IRequest<String, RequestBody>): Observable {
-        return RealObserver.newObservable(this, request as Request)
+    override fun newObservable(request: IRequest<String, RequestBody>): Listener {
+        return RealListener.newObservable(this, request as Request)
     }
 
 

@@ -29,7 +29,7 @@ internal class WildcardFiller @JvmOverloads constructor(
                 it[body.convertKey()] = body
             }?.also {
                 var filter: Set<Subscribe> = emptySet()
-                body.topic?.also {
+                body.topic.also {
                     if (it.endsWith("#")) {
                         filter = filterByWildcard1(it)
 
@@ -47,11 +47,9 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 订阅主题
      *
      * @param bodies 订阅内容集合
-     * @param attachRecord 是否附加到记录中
      */
     internal fun subscribe(
         bodies: List<Subscribe>,
-        attachRecord: Boolean = false,
         client: MqttWrapperClient
     ): Pair<List<String>, List<Int>> {
 
@@ -63,16 +61,16 @@ internal class WildcardFiller @JvmOverloads constructor(
             subscribeBodies.takeIf {
                 !subscribeBodies.containsKey(body.convertKey()) && needSubscribe(body)
             }?.also {
-                topic.add(body.topic!!)
+                topic.add(body.topic)
                 qos.add(body.qos)
             }.takeIf {
-                attachRecord
+                body.attachRecord
             }?.let {
                 it[body.convertKey()] = body
                 body
             }?.also {
                 // TODO 存在隐患，主题级别
-                body.topic?.also {
+                body.topic.also {
                     if (it.endsWith("#")) {
                         filter.addAll(filterByWildcard1(it))
                     } else if (it.endsWith("+")) {
@@ -160,9 +158,9 @@ internal class WildcardFiller @JvmOverloads constructor(
                 subscribeBodies.containsKey(body.convertKey())
             }?.remove(body.convertKey())
             ?.takeIf {
-                body.topic?.endsWith("#") ?: false || body.topic?.endsWith("+") ?: false
+                body.topic.endsWith("#") || body.topic.endsWith("+")
             }?.run {
-                val topic = body.topic!!
+                val topic = body.topic
                 when {
                     topic.endsWith("#") -> {
                         filter = appendTopic1(topic)
@@ -177,7 +175,7 @@ internal class WildcardFiller @JvmOverloads constructor(
             }
 
 
-        if(filter.isNotEmpty()){
+        if (filter.isNotEmpty()) {
             client.subscribe(filter.toList())
         }
     }
@@ -186,11 +184,9 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 取消订阅主题
      *
      * @param bodies 订阅内容集合
-     * @param attachRecord 是否附加到记录中
      */
     internal fun unsubscribe(
         bodies: List<Subscribe>,
-        attachRecord: Boolean = false,
         client: MqttWrapperClient
     ): List<String> {
 
@@ -204,15 +200,15 @@ internal class WildcardFiller @JvmOverloads constructor(
                     needUnsubscribe(body)
                     subscribeBodies.containsKey(body.convertKey())
                 }?.also {
-                    topic.add(body.topic!!)
+                    topic.add(body.topic)
                     qos.add(body.qos)
                 }.takeIf {
-                    attachRecord
+                    body.attachRecord
                 }?.remove(body.convertKey())
                 ?.takeIf {
-                    body.topic?.endsWith("#") ?: false || body.topic?.endsWith("+") ?: false
+                    body.topic.endsWith("#") || body.topic.endsWith("+")
                 }?.run {
-                    val topic = body.topic!!
+                    val topic = body.topic
                     when {
                         topic.endsWith("#") -> {
                             filter.addAll(appendTopic1(topic))
@@ -227,7 +223,7 @@ internal class WildcardFiller @JvmOverloads constructor(
                 }
         }
 
-        if(filter.isNotEmpty()){
+        if (filter.isNotEmpty()) {
             client.subscribe(filter.toList())
         }
 
@@ -289,7 +285,7 @@ internal class WildcardFiller @JvmOverloads constructor(
         var currentNote = rootNote
         var hierarchy = -1
 
-        body.topic?.split("/")?.forEach {
+        body.topic.split("/").forEach {
             if (needAddSubscribe) {
                 when {
                     currentNote.child["#"] != null -> needAddSubscribe = false
@@ -319,7 +315,7 @@ internal class WildcardFiller @JvmOverloads constructor(
     private fun needUnsubscribe(body: Subscribe) {
         if (!subscribeOptimize) return
 
-        val array = body.topic?.split("/") ?: arrayListOf()
+        val array = body.topic.split("/")
         val currentNote = rootNote
         removeLastNote(currentNote, array, 0)
     }

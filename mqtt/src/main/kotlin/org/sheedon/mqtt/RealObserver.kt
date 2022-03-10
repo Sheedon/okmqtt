@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Sheedon.
+ * Copyright (C) 2020 Sheedon.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,9 @@
  */
 package org.sheedon.mqtt
 
-import org.sheedon.rr.core.IRequest
-import org.sheedon.rr.core.IResponse
-import org.sheedon.rr.dispatcher.RealObservable
-import org.sheedon.rr.core.Callback
+import org.eclipse.paho.client.mqttv3.IMqttActionListener
+import org.eclipse.paho.client.mqttv3.IMqttToken
+import org.sheedon.mqtt.listener.Callback
 
 /**
  * Real Observer wrapper class for dispatching locally constructed subscribes
@@ -28,42 +27,77 @@ import org.sheedon.rr.core.Callback
  * @Date: 2022/1/30 8:31 下午
  */
 class RealObserver(
-    val realObserver: RealObservable<String, String, RequestBody, ResponseBody>
+    private val client: MqttWrapperClient,
+    private val originalSubscribe: List<Subscribe>
 ) : Observable {
+
+    // 执行是否为订阅
+    private var isSubscribe = false
+
+    // 是否执行取消操作
+    @Volatile
+    private var canceled = false
+
+    override fun isCanceled() = canceled
 
     companion object {
 
         @JvmStatic
-        fun newObservable(client: MqttRRBinderClient, request: Request): Observable {
-            val realObservable = RealObservable(client, request)
-            return RealObserver(realObservable)
+        fun newObservable(client: MqttWrapperClient, subscribe: Subscribe): Observable {
+            return RealObserver(client, listOf(subscribe))
+        }
+
+        @JvmStatic
+        fun newObservable(client: MqttWrapperClient, subscribe: List<Subscribe>): Observable {
+            return RealObserver(client, subscribe)
         }
     }
 
-    override fun <RRCallback : Callback<IRequest<String, RequestBody>,
-            IResponse<String, ResponseBody>>> subscribe(
-        callback: RRCallback
-    ) {
-        realObserver.subscribe(callback)
+    override fun subscribe(callback: Callback?) {
+        isSubscribe = true
+        client.subscribe(originalSubscribe, loadListener(callback))
     }
 
-    @Suppress("UNCHECKED_CAST")
-    override fun subscribe(callback: org.sheedon.mqtt.Callback?) {
-        this.subscribe(
-            callback as Callback<IRequest<String, RequestBody>,
-                    IResponse<String, ResponseBody>>
-        )
+    override fun unsubscribe(callback: Callback?) {
+        isSubscribe = false
+        client.subscribe(originalSubscribe, loadListener(callback))
     }
 
-    override fun <Request : IRequest<String, RequestBody>> request(): Request {
-        return realObserver.request()
+    /**
+     * 加载监听器
+     * @param callback 反馈监听器
+     * @return IMqttActionListener mqtt动作监听器
+     */
+    private fun loadListener(callback: Callback?): IMqttActionListener? {
+        if (callback == null) {
+            return null
+        }
+        return object : IMqttActionListener {
+            override fun onSuccess(asyncActionToken: IMqttToken?) {
+                callback.onResponse(originalSubscribe, asyncActionToken?.response)
+            }
+
+            override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+                callback.onFailure(exception)
+            }
+        }
+
     }
 
+    override fun subscribes(): List<Subscribe> {
+        return originalSubscribe
+    }
+
+    /**
+     * 取消动作
+     * 如果是订阅操作，则取消订阅
+     * 但是取消订阅，不操作
+     */
     override fun cancel() {
-        realObserver.cancel()
-    }
-
-    override fun isCanceled(): Boolean {
-        return realObserver.isCanceled()
+        originalSubscribe.takeIf {
+            isSubscribe
+        }?.also {
+            client.subscribe(originalSubscribe)
+        }
     }
 }
