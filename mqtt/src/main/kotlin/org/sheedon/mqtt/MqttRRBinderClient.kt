@@ -44,7 +44,7 @@ class MqttRRBinderClient constructor(
     /**
      * 新增默认超时时间方法
      */
-    internal fun getTimeout():Int{
+    internal fun getTimeout(): Int {
         return builder.timeout
     }
 
@@ -66,6 +66,20 @@ class MqttRRBinderClient constructor(
      */
     override fun newObservable(request: IRequest<String, RequestBody>): Listener {
         return RealListener.newObservable(this, request as Request)
+    }
+
+    /**
+     * An observer Observable that creates information
+     *
+     * @param mqttClient OkMqttClient
+     * @param request request object
+     * @return Observable Subscribe to a topic and listen for messages from that topic
+     */
+    internal fun newObservable(
+        mqttClient: OkMqttClient,
+        request: IRequest<String, RequestBody>
+    ): Listener {
+        return RealListener.newObservable(mqttClient, this, request as Request)
     }
 
 

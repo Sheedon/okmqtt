@@ -37,7 +37,7 @@ class OkMqttClient internal constructor(
 ) : MqttFactory {
 
     private val mqttRRBinderClient: MqttRRBinderClient = builder.mqttRRBinderClient!!
-    val mqttClient: MqttWrapperClient = builder.mqttClient!!
+    private val mqttClient: MqttWrapperClient = builder.mqttClient!!
 
     constructor() : this(Builder())
 
@@ -77,23 +77,43 @@ class OkMqttClient internal constructor(
     }
 
     /**
-     * 创建信息的观察者 Observable
+     * 创建mqtt订阅Observable
      *
-     * @param request 请求对象
-     * @return Observable 订阅某个主题，监听该主题的消息
+     * @param request 订阅对象
+     * @return Call 用于执行入队/提交请求的动作
      */
-    fun newObservable(request: IRequest<String, RequestBody>): Listener {
-        return mqttRRBinderClient.newObservable(request)
+    override fun newObservable(request: Subscribe): Observable {
+        return mqttClient.newObservable(listOf(request))
     }
 
     /**
-     * 创建信息的观察者 Observable
+     * 创建请求响应的Call
+     *
+     * @param request 请求对象
+     * @return Call 用于执行入队/提交请求的动作
+     */
+    override fun newObservable(request: List<Subscribe>): Observable {
+        return mqttClient.newObservable(request)
+    }
+
+    /**
+     * 创建信息的观察者 Listener
+     *
+     * @param request 请求对象
+     * @return Listener 订阅某个主题，监听该主题的消息
+     */
+    override fun newListen(request: Request): Listener {
+        return mqttRRBinderClient.newObservable(this, request)
+    }
+
+    /**
+     * 创建信息的监听者
      *
      * @param request 请求对象
      * @return Observable 订阅某个主题，监听该主题的消息
      */
-    override fun newObservable(request: Request): Listener {
-        return mqttRRBinderClient.newObservable(request)
+    fun newListen(request: IRequest<String, RequestBody>): Listener {
+        return mqttRRBinderClient.newObservable(this, request)
     }
 
     /**

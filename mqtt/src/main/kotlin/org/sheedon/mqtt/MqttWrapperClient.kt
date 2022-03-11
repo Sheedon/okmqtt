@@ -28,6 +28,7 @@ import org.sheedon.rr.core.DispatchAdapter
 import org.sheedon.rr.core.IRequestSender
 import java.lang.Exception
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * Real mqtt wrapper scheduling client
@@ -543,6 +544,10 @@ class MqttWrapperClient private constructor(
      */
     fun publish(topic: String, message: MqttMessage): IMqttDeliveryToken {
         return mqttClient.publish(topic, message)
+    }
+
+    fun newObservable(request: List<Subscribe>): Observable {
+        return RealObserver(this, request)
     }
 
 
