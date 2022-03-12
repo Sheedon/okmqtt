@@ -6,12 +6,17 @@ package org.sheedon.mqtt
  * @Email: sheedonsun@163.com
  * @Date: 2022/2/13 9:56 下午
  */
-interface MqttFactory : CallFactory, ObservableFactory
+interface MqttFactory : CallFactory, ObservableFactory, ListenFactory
 
 interface CallFactory {
     fun newCall(request: Request): Call
 }
 
 interface ObservableFactory {
-    fun newObservable(request: Request): Observable
+    fun newObservable(request: Subscribe): Observable
+    fun newObservable(request: List<Subscribe>): Observable
+}
+
+interface ListenFactory {
+    fun newListen(request: Request): Listener
 }
