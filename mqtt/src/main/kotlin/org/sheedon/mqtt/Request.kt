@@ -58,12 +58,8 @@ class Request internal constructor(
             relation = relationBuilder
         }
 
-        open fun addAllSubscribe(subscribeArray: MutableList<Subscribe>) = apply {
-            relation.addAll(subscribeArray)
-        }
-
-        open fun addSubscribe(subscribe: Subscribe) = apply {
-            relation.add(subscribe)
+        open fun subscribe(subscribe: Subscribe) = apply {
+            relation.subscribe(subscribe)
         }
 
         override fun body(body: RequestBody?) = apply {

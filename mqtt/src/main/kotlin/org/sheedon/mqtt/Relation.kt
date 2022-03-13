@@ -1,7 +1,5 @@
 package org.sheedon.mqtt
 
-import kotlin.collections.ArrayList
-
 /**
  * 请求对象的关联者
  * 版本1，新增订阅主题集合
@@ -11,45 +9,38 @@ import kotlin.collections.ArrayList
  * @Date: 2022/3/7 10:52 下午
  */
 class Relation private constructor(
-    @get:JvmName("subscribeArray") val subscribeArray: Array<Subscribe>,// 需要订阅的集合
+    @get:JvmName("subscribe") val subscribe: Subscribe? = null,// 需要订阅的集合
 ) {
 
     fun newBuilder(): Builder {
         val result = Builder()
-        result.subscribeArray += subscribeArray
+        result.subscribe = subscribe
         return result
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is Relation && subscribeArray.contentEquals(other.subscribeArray)
+        return other is Relation && subscribe == other
     }
 
     override fun hashCode(): Int {
-        return subscribeArray?.contentHashCode() ?: 0
+        return subscribe?.hashCode() ?: 0
     }
 
     override fun toString(): String {
         return buildString {
-            subscribeArray.forEachIndexed { index, subscribe ->
-                if (index > 0) {
-                    append(", ")
-                }
+            subscribe?.also {
                 append("{topic:${subscribe.topic}, qos:${subscribe.qos}}")
             }
         }
     }
 
     class Builder {
-        internal val subscribeArray: MutableList<Subscribe> = ArrayList(2)
+        internal var subscribe: Subscribe? = null
 
-        fun addAll(subscribeArray: MutableList<Subscribe>) = apply {
-            this.subscribeArray.addAll(subscribeArray)
+        fun subscribe(subscribe: Subscribe) = apply {
+            this.subscribe = subscribe
         }
 
-        fun add(subscribe: Subscribe) = apply {
-            this.subscribeArray.add(subscribe)
-        }
-
-        fun build(): Relation = Relation(subscribeArray.toTypedArray())
+        fun build(): Relation = Relation(subscribe)
     }
 }
