@@ -15,6 +15,7 @@
  */
 package org.sheedon.mqtt
 
+import org.eclipse.paho.client.mqttv3.internal.wire.MqttWireMessage
 import org.sheedon.rr.core.Callback
 
 /**
@@ -25,4 +26,17 @@ import org.sheedon.rr.core.Callback
  * @Date: 2022/1/30 7:57 下午
  */
 interface Callback : Callback<Request, Response> {
+}
+
+interface SubscribeCallback {
+    /**
+     * 当请求由于取消、连接问题或超时而无法执行时调用。
+     * 由于网络可能在交换期间发生故障，因此远程服务器可能在故障之前接受了请求。
+     */
+    fun onFailure(e: Throwable?)
+
+    /**
+     * 当请求成功返回，从而响应时调用。
+     */
+    fun onResponse(response: MqttWireMessage?)
 }
