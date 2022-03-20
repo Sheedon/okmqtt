@@ -1,4 +1,4 @@
-package org.sheedon.mqtt.internal
+package org.sheedon.mqtt.internal.binder
 
 import org.sheedon.mqtt.Response
 import org.sheedon.mqtt.ResponseBody

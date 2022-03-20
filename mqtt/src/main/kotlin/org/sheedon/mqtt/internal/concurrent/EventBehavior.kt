@@ -1,4 +1,4 @@
-package org.sheedon.mqtt.internal
+package org.sheedon.mqtt.internal.concurrent
 
 /**
  * 事件处理行为

@@ -1,4 +1,4 @@
-package org.sheedon.mqtt.internal
+package org.sheedon.mqtt.internal.binder
 
 import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
@@ -13,7 +13,7 @@ import org.sheedon.mqtt.Subscribe
  * @Email: sheedonsun@163.com
  * @Date: 2022/3/17 11:51 下午
  */
-interface IRequestProxy {
+interface IRequestHandler {
 
     /**
      * 发送mqtt消息
