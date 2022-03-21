@@ -12,7 +12,7 @@ import org.sheedon.mqtt.internal.binder.IResponseConverter
  * @Email: sheedonsun@163.com
  * @Date: 2022/3/20 3:03 下午
  */
-interface DispatchManager {
+interface IDispatchManager {
 
     /**
      * 请求处理者

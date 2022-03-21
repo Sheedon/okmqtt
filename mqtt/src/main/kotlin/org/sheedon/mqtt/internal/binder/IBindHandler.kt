@@ -1,5 +1,6 @@
 package org.sheedon.mqtt.internal.binder
 
+import org.sheedon.mqtt.ICallback
 import org.sheedon.mqtt.Request
 
 /**
@@ -16,7 +17,7 @@ interface IBindHandler {
      * @param callback 内部Callback
      * @return String 实际订阅的关键字
      */
-    fun subscribe(request: Request, callback: InternalCallback): String
+    fun subscribe(request: Request, callback: ICallback): String
 
     /**
      * 取消订阅一个Callback
