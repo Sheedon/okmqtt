@@ -62,6 +62,15 @@ class DefaultLogger private constructor() {
         }
     }
 
+    fun error(tag: String?, message: String?) {
+        if (isShowLog) {
+            val stackTraceElement = Thread.currentThread().stackTrace[3]
+            Log.e(if (tag.isNullOrEmpty()) getDefaultTag() else tag,
+                message + getExtInfo(stackTraceElement)
+            )
+        }
+    }
+
     private fun getDefaultTag(): String {
         return defaultTag
     }
