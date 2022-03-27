@@ -28,12 +28,12 @@ import java.nio.charset.Charset
  * @Date: 2022/1/30 10:58 上午
  */
 open class RequestBody @JvmOverloads constructor(
-    var topic: String,
-    var data: String,
-    @IntRange(from = 0, to = 2) qos: Int = 0,
-    retained: Boolean = false,
-    charset: String? = null,
-    var autoEncode: Boolean = true
+    @get:JvmName("topic") var topic: String,
+    @get:JvmName("data") var data: String,
+    @get:JvmName("qos") @IntRange(from = 0, to = 2) val qos: Int = 0,
+    @get:JvmName("retained") val retained: Boolean = false,
+    @get:JvmName("charset") val charset: String? = null,
+    @get:JvmName("autoEncode") var autoEncode: Boolean = true
 ) : MqttMessage() {
 
     init {
@@ -45,6 +45,22 @@ open class RequestBody @JvmOverloads constructor(
         }
         super.setQos(qos)
         super.setRetained(retained)
+    }
+
+    override fun toString(): String = buildString {
+        append("RequestBody{topic=")
+        append(topic)
+        append(",data=")
+        append(data)
+        append(",qos=")
+        append(qos)
+        append(",retained=")
+        append(isRetained)
+        append(",charset=")
+        append(charset)
+        append(",autoEncode=")
+        append(autoEncode)
+        append('}')
     }
 
 }

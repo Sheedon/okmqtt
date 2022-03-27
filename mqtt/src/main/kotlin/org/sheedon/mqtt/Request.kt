@@ -16,8 +16,6 @@
 package org.sheedon.mqtt
 
 import androidx.annotation.IntRange
-import org.sheedon.rr.dispatcher.model.BaseRequest
-import org.sheedon.rr.dispatcher.model.BaseRequestBuilder
 
 /**
  * Request object, including content: "back topic" + "timeout duration" + "request message body"
@@ -27,44 +25,26 @@ import org.sheedon.rr.dispatcher.model.BaseRequestBuilder
  * @Date: 2022/1/30 10:58 上午
  */
 class Request internal constructor(
-    builder: Builder
-) : BaseRequest<String, RequestBody>(builder) {
+    @get:JvmName("relation") val relation: Relation,
+    @get:JvmName("body") val body: RequestBody?,
+) {
 
-    // 关联
-    @get:JvmName("relation")
-    val relation: Relation = builder.relation.build()
+    override fun toString(): String = buildString {
+        append("Request{body=")
+        append(body)
+        append(",relation=")
+        append(relation)
+        append('}')
+    }
 
-    open class Builder : BaseRequestBuilder<Request, String, RequestBody>() {
+    open class Builder {
         internal var topic: String = ""
         internal var data: String = ""
         internal var qos: Int = 0
         internal var retained: Boolean = false
+        internal var charset: String? = null
         internal var relation: Relation.Builder = Relation.Builder()
-
-
-        override fun backTopic(backTopic: String) = apply {
-            super.backTopic(backTopic)
-        }
-
-        override fun delayMilliSecond(delayMilliSecond: Long) = apply {
-            super.delayMilliSecond(delayMilliSecond)
-        }
-
-        override fun delaySecond(delaySecond: Int) = apply {
-            super.delaySecond(delaySecond)
-        }
-
-        open fun relation(relationBuilder: Relation.Builder) = apply {
-            relation = relationBuilder
-        }
-
-        open fun subscribe(subscribe: Subscribe) = apply {
-            relation.subscribe(subscribe)
-        }
-
-        override fun body(body: RequestBody?) = apply {
-            super.body(body)
-        }
+        internal var body: RequestBody? = null
 
         /**
          * 设置请求主题
@@ -106,15 +86,91 @@ class Request internal constructor(
             this.retained = retained
         }
 
-        override fun requireBackTopicNull(backTopic: String?): Boolean {
-            return backTopic.isNullOrEmpty()
+        /**
+         * 设置请求消息字符集
+         * @param charset 字符集
+         */
+        open fun charset(charset: String) = apply {
+            this.charset = charset
         }
 
-        override fun build(): Request {
-            if (super.body() == null) {
-                body(RequestBody(topic, data, qos, retained))
+        /**
+         * 设置请求消息
+         * 包含内容：发送主题、发送消息质量、是否保留、消息
+         *
+         * @param body 消息内容
+         */
+        open fun body(body: RequestBody) = apply {
+            this.body = body
+        }
+
+        /**
+         * 响应所订阅的主题，默认消息质量为0
+         */
+        open fun backTopic(backTopic: String) = apply {
+            relation.subscribe(Subscribe(backTopic))
+        }
+
+        /**
+         * 配置关联项，包含响应主题
+         */
+        open fun relation(relationBuilder: Relation.Builder) = apply {
+            relation = relationBuilder
+        }
+
+        /**
+         * 订阅主题信息
+         */
+        open fun subscribe(subscribe: Subscribe) = apply {
+            relation.subscribe(subscribe)
+        }
+
+        /**
+         * 订阅主题信息
+         */
+        open fun subscribe(
+            backTopic: String,
+            qos: Int = 0,
+            attachRecord: Boolean = false,
+            userContext: Any? = null
+        ) = apply {
+            relation.subscribe(Subscribe(backTopic, qos, userContext, attachRecord))
+        }
+
+        /**
+         * 绑定的关联字段，若该字段不为""，则代表采用关联字段作为响应消息的匹配字段进行关联
+         * 否则取relation内的订阅主题
+         */
+        open fun keyword(keyword: String) = apply {
+            relation.keyword(keyword)
+        }
+
+        /**
+         * 单次请求超时额外设置
+         *
+         * @param delayMilliSecond 延迟时间（毫秒）
+         */
+        open fun delayMilliSecond(delayMilliSecond: Long) = apply {
+            relation.delayMilliSecond(delayMilliSecond)
+        }
+
+        /**
+         * 单次请求超时额外设置
+         *
+         * @param delaySecond 延迟时间（秒）
+         */
+        open fun delaySecond(delaySecond: Int) = apply {
+            relation.delaySecond(delaySecond)
+        }
+
+        open fun build(): Request {
+            check(topic.isEmpty()) { "top == null" }
+
+            if (body == null) {
+                body(RequestBody(topic, data, qos, retained, charset))
             }
-            return Request(this)
+
+            return Request(relation.build(), body)
         }
 
 
