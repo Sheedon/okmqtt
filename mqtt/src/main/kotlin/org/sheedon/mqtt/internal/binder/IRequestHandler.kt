@@ -3,6 +3,7 @@ package org.sheedon.mqtt.internal.binder
 import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
 import org.eclipse.paho.client.mqttv3.MqttMessage
+import org.sheedon.mqtt.RequestBody
 import org.sheedon.mqtt.Subscribe
 
 /**
@@ -15,6 +16,16 @@ import org.sheedon.mqtt.Subscribe
  */
 interface IRequestHandler {
 
+
+    /**
+     * 核实请求数据，并且将处理后的请求数据返回
+     *
+     * @param data 请求数据
+     * @return 核实组合后的请求数据
+     */
+    fun checkRequestData(data: RequestBody): RequestBody
+
+    
     /**
      * 发送mqtt消息
      *
