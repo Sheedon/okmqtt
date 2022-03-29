@@ -3,10 +3,12 @@ package org.sheedon.mqtt.internal.connection.responsibility
 import org.sheedon.mqtt.Request
 import org.sheedon.mqtt.RequestBody
 import org.sheedon.mqtt.internal.IDispatchManager
+import org.sheedon.mqtt.internal.concurrent.CallbackEnum
 import org.sheedon.mqtt.internal.connection.Plan
 import org.sheedon.mqtt.internal.connection.RealCall
 import org.sheedon.mqtt.internal.connection.RealPlan
 import org.sheedon.mqtt.internal.log
+import kotlin.math.min
 
 /**
  * 发送职责环节 plan
@@ -52,16 +54,25 @@ class PublishPlan(
 
         // 添加绑定
         val callback = call.callback
+        var timeout = DEFAULT_TIMEOUT // 默认超时
         if (callback != null) {
             val bindHandler = dispatcher.bindHandler()
-            publishId = bindHandler.subscribe(request, callback)
+            val (id, t) = bindHandler.subscribe(relation, callback, CallbackEnum.SINGLE)
+            publishId = id
+            timeout = t
+        }
+
+        if (timeout <= 0) {
+            throw IllegalArgumentException(
+                "request's relation bind timeout needs to be greater than 0 by $request"
+            )
         }
 
         // 1. 执行提交，最多等待结果3秒，若超时，则认为请求失败，到达catch中
         // 2. 执行结束后，执行成功，并且当前状态为取消，则执行解除绑定的行为
         try {
             val token = requestHandler.publish(body.topic, body)
-            token.waitForCompletion(3000)
+            token.waitForCompletion(min(timeout, DEFAULT_TIMEOUT))
             executed = true
         } catch (e: Exception) {
             log.error("Dispatcher", "$request publish mqtt message fail:$e")
@@ -97,6 +108,11 @@ class PublishPlan(
         val bindHandler = dispatcher.bindHandler()
         val keyword = relation.keyword ?: relation.subscribe?.topic ?: ""
         bindHandler.unsubscribe(publishId ?: keyword)
+    }
+
+    companion object {
+        // 默认超时时间
+        private const val DEFAULT_TIMEOUT = 3000L
     }
 
 }
