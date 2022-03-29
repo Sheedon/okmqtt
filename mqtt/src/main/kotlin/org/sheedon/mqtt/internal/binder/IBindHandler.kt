@@ -1,7 +1,8 @@
 package org.sheedon.mqtt.internal.binder
 
 import org.sheedon.mqtt.ICallback
-import org.sheedon.mqtt.Request
+import org.sheedon.mqtt.Relation
+import org.sheedon.mqtt.internal.concurrent.CallbackEnum
 
 /**
  * 绑定者处理者职责
@@ -14,16 +15,16 @@ interface IBindHandler {
     /**
      * 订阅一个Callback
      *
-     * @param request 请求对象，主要用于提取关键字，超时时间间隔
+     * @param relation 关联对象，主要用于提取关键字，超时时间间隔
      * @param callback 内部Callback
-     * @return String 实际订阅的结果ID
+     * @return String 实际订阅的结果ID,Long 超时时间
      */
-    fun subscribe(request: Request, callback: ICallback): String
+    fun subscribe(relation: Relation, callback: ICallback, type: CallbackEnum): Pair<String, Long>
 
     /**
      * 取消订阅一个Callback
      * 将 subscribe 返回的id作为绑定ID去取消订阅
      */
-    fun unsubscribe(bindId: String)
+    fun unsubscribe(id: String)
 
 }
