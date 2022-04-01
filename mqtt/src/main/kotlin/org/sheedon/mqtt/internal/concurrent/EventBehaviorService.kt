@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.sheedon.mqtt
+package org.sheedon.mqtt.internal.concurrent
 
 import org.sheedon.mqtt.utils.Logger
-import org.sheedon.rr.core.EventBehavior
-import java.util.concurrent.Executors
+import java.util.concurrent.*
 
 /**
  * The event behavior service of mqtt puts the event into the thread pool for execution
@@ -26,11 +25,28 @@ import java.util.concurrent.Executors
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/31 1:35 下午
  */
-class MqttEventBehaviorService : EventBehavior {
+class EventBehaviorService : EventBehavior {
 
     // Thread pool processing tasks submit feedback data,
     // which may be high concurrency, use cache thread pool to share a unified thread pool
-    private val service = Executors.newCachedThreadPool()
+    private var executorServiceOrNull: ExecutorService? = null
+
+    @get:Synchronized
+    @get:JvmName("executorService")
+    val executorService: ExecutorService
+        get() {
+            if (executorServiceOrNull == null) {
+                executorServiceOrNull = ThreadPoolExecutor(
+                    0, Int.MAX_VALUE, 60, TimeUnit.SECONDS,
+                    SynchronousQueue()
+                ) { runnable ->
+                    Thread(runnable, "MQTT Dispatcher").apply {
+                        isDaemon = false
+                    }
+                }
+            }
+            return executorServiceOrNull!!
+        }
 
     /**
      * Put the feedback event into the thread pool for execution
@@ -40,7 +56,7 @@ class MqttEventBehaviorService : EventBehavior {
      */
     override fun enqueueRequestEvent(requestRunnable: Runnable): Boolean {
         Logger.info("enqueue requestRunnable to RequestEvent by MqttEventBehaviorService")
-        service.execute(requestRunnable)
+        executorService.execute(requestRunnable)
         return true
     }
 
@@ -52,7 +68,7 @@ class MqttEventBehaviorService : EventBehavior {
      */
     override fun enqueueCallbackEvent(callbackRunnable: Runnable): Boolean {
         Logger.info("enqueue callbackRunnable to CallbackEvent by MqttEventBehaviorService")
-        service.execute(callbackRunnable)
+        executorService.execute(callbackRunnable)
         return true
     }
 }

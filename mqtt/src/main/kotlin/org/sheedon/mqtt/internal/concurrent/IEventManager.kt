@@ -12,7 +12,7 @@ import org.sheedon.rr.timeout.DelayEvent
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/8 5:03 下午
  */
-interface EventManager {
+interface IEventManager {
     /**
      * 将反馈主题和反馈监听器添加到事件中，并且返回延迟事件，用于处理超时任务
      *
