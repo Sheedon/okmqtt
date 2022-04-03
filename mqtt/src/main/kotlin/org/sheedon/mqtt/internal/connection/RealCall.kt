@@ -108,7 +108,7 @@ class RealCall(
             val isNeedCallback = responseCallback != null
 
             // 提交请求的流程
-            val publishPlan = PublishPlan(this@RealCall, null, originalRequest, dispatcher)
+            val publishPlan = PublishPlan(this@RealCall, null)
 
             planChain = if (isNeedCallback) {
                 SubscribePlan(this@RealCall, publishPlan, originalRequest, dispatcher)

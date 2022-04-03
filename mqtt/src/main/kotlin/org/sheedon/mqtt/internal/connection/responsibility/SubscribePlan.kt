@@ -2,8 +2,7 @@ package org.sheedon.mqtt.internal.connection.responsibility
 
 import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttToken
-import org.sheedon.mqtt.Request
-import org.sheedon.mqtt.internal.IDispatchManager
+import org.sheedon.mqtt.SubscriptionType
 import org.sheedon.mqtt.internal.connection.Plan
 import org.sheedon.mqtt.internal.connection.RealCall
 import org.sheedon.mqtt.internal.connection.RealPlan
@@ -17,10 +16,8 @@ import org.sheedon.mqtt.internal.log
  */
 class SubscribePlan(
     call: RealCall,
-    nextPlan: Plan?,
-    request: Request,
-    dispatcher: IDispatchManager
-) : RealPlan(call, nextPlan, request, dispatcher), IMqttActionListener {
+    nextPlan: Plan?
+) : RealPlan(call, nextPlan), IMqttActionListener {
 
     // 是否完成订阅
     private var subscribed = false
@@ -28,21 +25,27 @@ class SubscribePlan(
 
     override fun proceed() {
         if (call.isCanceled()) {
-            log.info("Dispatcher", "subscribePlan to cancel proceed by $request")
+            log.info("Dispatcher", "subscribePlan to cancel proceed by ${call.originalRequest}")
             return
         }
+
+        val request = call.originalRequest
         log.info("Dispatcher", "subscribePlan to proceed by $request")
         val relation = request.relation
 
         // 若不存在订阅主题，则直接调用下一个流程
         // 否则，执行订阅操作
-        if (relation.subscribe?.topic.isNullOrEmpty()) {
+        val topics = relation.topics
+        if (topics?.topic.isNullOrEmpty()
+            || topics?.headers?.subscriptionType == SubscriptionType.REMOTE
+        ) {
             super.proceed()
             return
         }
 
+        val dispatcher = call.dispatcher
         // 订阅主题
-        dispatcher.requestHandler().subscribe(relation.subscribe!!, this)
+        dispatcher.requestHandler().subscribe(relation.topics!!, this)
     }
 
     /**
@@ -76,9 +79,11 @@ class SubscribePlan(
     }
 
     private fun unSubscribe() {
+        val request = call.originalRequest
         log.info("Dispatcher", "subscribePlan to cancel by $request")
         val relation = request.relation
-        dispatcher.requestHandler().unsubscribe(relation.subscribe!!)
+        val dispatcher = call.dispatcher
+        dispatcher.requestHandler().unsubscribe(relation.topics!!)
     }
 
 }

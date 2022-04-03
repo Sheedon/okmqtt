@@ -1,7 +1,6 @@
 package org.sheedon.mqtt.internal.concurrent
 
 import org.sheedon.mqtt.*
-import org.sheedon.mqtt.internal.IRelationBinder
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -31,26 +30,28 @@ internal class RequestCallArray {
      *
      * 2.构建ReadyTask对象，反馈给[Dispatcher.readyCalls]
      *
-     * @param request 请求对象，存储基本绑定信息，为反馈做关联
+     * @param call 呼叫对象，存储基本绑定信息，为反馈做关联
      * @param callback 反馈对象，回调信息
      * @param loadId 加载一个消息ID的方法
      */
     fun subscribe(
-        request: IRelationBinder,
+        call: Call,
         callback: ICallback,
         loadId: () -> Long
     ): Pair<Long, ReadyTask> {
         // 获取消息ID
         val id = loadId()
         // 创建就绪的任务
-        val readyTask = ReadyTask(request, id, CallbackEnum.SINGLE, callback)
+        val readyTask = ReadyTask(call, id, CallbackEnum.SINGLE, callback)
+
+        val request = call.request()
         val relation = request.getRelation()
 
         // 关键字不存在，则说明必然是订阅主题消息
         val keyword = relation.keyword
         if (keyword.isNullOrEmpty()) {
 
-            val subscribe = relation.subscribe
+            val subscribe = relation.topics
             check(subscribe != null) { "please add subscribe by $relation" }
 
             val queue = getQueueByTopic(subscribe.topic)
@@ -125,7 +126,7 @@ internal class RequestCallArray {
         keyword: String?,
         responseBody: ResponseBody,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, IRelationBinder, Response) -> Unit
+        callResponse: (ICallback?, Call, Response) -> Unit
     ) {
 
         val response = Response(keyword, responseBody)
@@ -153,7 +154,7 @@ internal class RequestCallArray {
         keyword: String?,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, IRelationBinder, Response) -> Unit
+        callResponse: (ICallback?, Call, Response) -> Unit
     ) {
         // 关键字为空，则无需接下来操作
         if (keyword.isNullOrEmpty()) {
@@ -180,7 +181,7 @@ internal class RequestCallArray {
         topic: String?,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, IRelationBinder, Response) -> Unit
+        callResponse: (ICallback?, Call, Response) -> Unit
     ) {
         // 关键字为空，则无需接下来操作
         if (topic.isNullOrEmpty()) {
@@ -220,7 +221,7 @@ internal class RequestCallArray {
         index: Int,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, IRelationBinder, Response) -> Unit
+        callResponse: (ICallback?, Call, Response) -> Unit
     ) {
         if (index == -1) {
             findAndCallResponse(PLUS, response, pollTaskById, callResponse, ::getQueueByTopic)
@@ -245,7 +246,7 @@ internal class RequestCallArray {
         index: Int,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, IRelationBinder, Response) -> Unit
+        callResponse: (ICallback?, Call, Response) -> Unit
     ) {
         if (index == -1) {
             findAndCallResponse(SIGN, response, pollTaskById, callResponse, ::getQueueByTopic)
@@ -274,7 +275,7 @@ internal class RequestCallArray {
         topic: String,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, IRelationBinder, Response) -> Unit,
+        callResponse: (ICallback?, Call, Response) -> Unit,
         findQueue: (String) -> ConcurrentLinkedQueue<Long>
     ) {
         // 从集合中取得队列
@@ -284,8 +285,9 @@ internal class RequestCallArray {
         // 推出当前ID的就绪任务
         val task = pollTaskById(id) ?: return
 
+
         // 完全匹配的反馈
-        callResponse(task.callback, task.request, response)
+        callResponse(task.callback, task.request as Call, response)
     }
 
     /**
@@ -299,7 +301,7 @@ internal class RequestCallArray {
         // 关键字不存在，则说明必然是订阅主题消息
         if (keyword.isNullOrEmpty()) {
 
-            val subscribe = relation.subscribe
+            val subscribe = relation.topics
             check(subscribe != null) { "please add subscribe by $relation" }
 
             val queue = getQueueByTopic(subscribe.topic)

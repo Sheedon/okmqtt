@@ -4,7 +4,7 @@ import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.sheedon.mqtt.RequestBody
-import org.sheedon.mqtt.Subscribe
+import org.sheedon.mqtt.Topics
 
 /**
  * 请求发送执行者
@@ -43,7 +43,7 @@ interface IRequestHandler {
      * @param listener 操作监听器
      */
     fun subscribe(
-        body: Subscribe,
+        body: Topics,
         listener: IMqttActionListener? = null
     )
 
@@ -53,7 +53,7 @@ interface IRequestHandler {
      * @param listener 操作监听器
      */
     fun unsubscribe(
-        body: Subscribe,
+        body: Topics,
         listener: IMqttActionListener? = null
     )
 }

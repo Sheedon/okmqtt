@@ -15,7 +15,8 @@
  */
 package org.sheedon.mqtt
 
-import org.sheedon.rr.core.Call
+import org.sheedon.mqtt.internal.connection.Listen
+
 
 /**
  * A call is a request that is ready to execute.
@@ -25,7 +26,7 @@ import org.sheedon.rr.core.Call
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/30 7:43 下午
  */
-interface Call : Call<String, RequestBody, ResponseBody> {
+interface Call : Listen {
 
     /**
      * Use the Callback in the protocol, you can also use the default enqueue (RRCallback callback),
@@ -34,4 +35,32 @@ interface Call : Call<String, RequestBody, ResponseBody> {
      * @param callback Callback with request
      */
     fun enqueue(callback: Callback?)
+
+    /**
+     * 获取请求数据
+     *
+     * @return Request 请求信息
+     */
+    fun request(): Request
+
+    /**
+     * 请求提交，标志着这个请求无需监听反馈
+     */
+    fun publish()
+
+    /**
+     * 消息是否取消
+     */
+    fun isCanceled(): Boolean
+
+    /**
+     * 取消任务
+     */
+    fun cancel()
+
+    /**
+     * 是否被执行完成
+     */
+    fun isExecuted(): Boolean
+
 }

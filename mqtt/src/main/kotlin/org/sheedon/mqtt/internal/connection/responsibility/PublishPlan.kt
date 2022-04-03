@@ -1,8 +1,6 @@
 package org.sheedon.mqtt.internal.connection.responsibility
 
-import org.sheedon.mqtt.Request
 import org.sheedon.mqtt.RequestBody
-import org.sheedon.mqtt.internal.IDispatchManager
 import org.sheedon.mqtt.internal.concurrent.CallbackEnum
 import org.sheedon.mqtt.internal.connection.Plan
 import org.sheedon.mqtt.internal.connection.RealCall
@@ -18,19 +16,19 @@ import kotlin.math.min
  */
 class PublishPlan(
     call: RealCall,
-    nextPlan: Plan?,
-    request: Request,
-    dispatcher: IDispatchManager
-) : RealPlan(call, nextPlan, request, dispatcher) {
+    nextPlan: Plan?
+) : RealPlan(call, nextPlan) {
 
     private var executed = false
-    private var publishId: String? = null
+    private var publishId: Long? = null
 
     override fun proceed() {
         if (call.isCanceled()) {
-            log.info("Dispatcher", "publishPlan to cancel proceed by $request")
+            log.info("Dispatcher", "publishPlan to cancel proceed by ${call.originalRequest}")
             return
         }
+
+        val request = call.originalRequest
         log.info("Dispatcher", "publishPlan to proceed by $request")
 
         // 请求body 不能为空
@@ -40,12 +38,13 @@ class PublishPlan(
                 "request's body is null by $request"
             )
 
+        val dispatcher = call.dispatcher
         val requestHandler = dispatcher.requestHandler()
         body = requestHandler.checkRequestData(body)
 
         val relation = request.relation
         // 需要有绑定内容
-        if (relation.keyword.isNullOrEmpty() && relation.subscribe?.topic.isNullOrEmpty()) {
+        if (relation.keyword.isNullOrEmpty() && relation.topics?.topic.isNullOrEmpty()) {
             throw IllegalArgumentException(
                 "request's relation bind topic or keyword is null by $request"
             )
@@ -57,7 +56,7 @@ class PublishPlan(
         var timeout = DEFAULT_TIMEOUT // 默认超时
         if (callback != null) {
             val bindHandler = dispatcher.bindHandler()
-            val (id, t) = bindHandler.subscribe(relation, callback, CallbackEnum.SINGLE)
+            val (id, t) = bindHandler.subscribe(call, callback, CallbackEnum.SINGLE)
             publishId = id
             timeout = t
         }
@@ -104,10 +103,10 @@ class PublishPlan(
             return
         }
 
-        val relation = request.relation
+        val dispatcher = call.dispatcher
+
         val bindHandler = dispatcher.bindHandler()
-        val keyword = relation.keyword ?: relation.subscribe?.topic ?: ""
-        bindHandler.unsubscribe(publishId ?: keyword)
+        bindHandler.unsubscribe(publishId ?: -1)
     }
 
     companion object {
