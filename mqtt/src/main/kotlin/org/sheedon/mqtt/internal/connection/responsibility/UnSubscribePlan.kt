@@ -4,7 +4,7 @@ import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttToken
 import org.sheedon.mqtt.Callback
 import org.sheedon.mqtt.Relation
-import org.sheedon.mqtt.SubscribeCallback
+import org.sheedon.mqtt.SubscribeBack
 import org.sheedon.mqtt.SubscriptionType
 import org.sheedon.mqtt.internal.IDispatchManager
 import org.sheedon.mqtt.internal.connection.*
@@ -145,8 +145,8 @@ class UnSubscribePlan(
 
         // 回调成功订阅的反馈
         if (call is RealObservable) {
-            val callback = call.callback
-            if (callback is SubscribeCallback) {
+            val callback = call.back
+            if (callback is SubscribeBack) {
                 callback.onResponse(asyncActionToken?.response)
             }
 
@@ -165,7 +165,7 @@ class UnSubscribePlan(
      */
     override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
         if (call is RealObservable) {
-            call.callback?.onFailure(exception)
+            call.back?.onFailure(exception)
         }
     }
 

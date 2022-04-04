@@ -1,6 +1,6 @@
 package org.sheedon.mqtt.internal.concurrent
 
-import org.sheedon.mqtt.ICallback
+import org.sheedon.mqtt.IBack
 import org.sheedon.mqtt.internal.connection.Listen
 
 /**
@@ -11,8 +11,8 @@ import org.sheedon.mqtt.internal.connection.Listen
  * @Date: 2022/1/9 2:58 下午
  */
 data class ReadyTask(
-    var request: Listen, // Call/Subscribe 的引用
+    var listen: Listen, // Call/Subscribe 的引用
     var id: Long, // 请求记录ID
     val type: CallbackEnum = CallbackEnum.SINGLE,//单次请求
-    var callback: ICallback? = null // 反馈Callback
+    var back: IBack? = null // 反馈Callback
 )

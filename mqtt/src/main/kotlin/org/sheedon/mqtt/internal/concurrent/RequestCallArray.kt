@@ -1,6 +1,8 @@
 package org.sheedon.mqtt.internal.concurrent
 
 import org.sheedon.mqtt.*
+import org.sheedon.mqtt.internal.connection.Listen
+import org.sheedon.mqtt.internal.connection.RealCall
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -31,21 +33,21 @@ internal class RequestCallArray {
      * 2.构建ReadyTask对象，反馈给[Dispatcher.readyCalls]
      *
      * @param call 呼叫对象，存储基本绑定信息，为反馈做关联
-     * @param callback 反馈对象，回调信息
+     * @param back 反馈对象，回调信息
      * @param loadId 加载一个消息ID的方法
      */
     fun subscribe(
         call: Call,
-        callback: ICallback,
+        back: IBack,
         loadId: () -> Long
     ): Pair<Long, ReadyTask> {
         // 获取消息ID
         val id = loadId()
         // 创建就绪的任务
-        val readyTask = ReadyTask(call, id, CallbackEnum.SINGLE, callback)
+        val readyTask = ReadyTask(call, id, CallbackEnum.SINGLE, back)
 
         val request = call.request()
-        val relation = request.getRelation()
+        val relation = request.relation
 
         // 关键字不存在，则说明必然是订阅主题消息
         val keyword = relation.keyword
@@ -126,7 +128,7 @@ internal class RequestCallArray {
         keyword: String?,
         responseBody: ResponseBody,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, Call, Response) -> Unit
+        callResponse: (IBack?, Call, Response) -> Unit
     ) {
 
         val response = Response(keyword, responseBody)
@@ -154,7 +156,7 @@ internal class RequestCallArray {
         keyword: String?,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, Call, Response) -> Unit
+        callResponse: (IBack?, Call, Response) -> Unit
     ) {
         // 关键字为空，则无需接下来操作
         if (keyword.isNullOrEmpty()) {
@@ -181,7 +183,7 @@ internal class RequestCallArray {
         topic: String?,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, Call, Response) -> Unit
+        callResponse: (IBack?, Call, Response) -> Unit
     ) {
         // 关键字为空，则无需接下来操作
         if (topic.isNullOrEmpty()) {
@@ -221,7 +223,7 @@ internal class RequestCallArray {
         index: Int,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, Call, Response) -> Unit
+        callResponse: (IBack?, Call, Response) -> Unit
     ) {
         if (index == -1) {
             findAndCallResponse(PLUS, response, pollTaskById, callResponse, ::getQueueByTopic)
@@ -246,7 +248,7 @@ internal class RequestCallArray {
         index: Int,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, Call, Response) -> Unit
+        callResponse: (IBack?, Call, Response) -> Unit
     ) {
         if (index == -1) {
             findAndCallResponse(SIGN, response, pollTaskById, callResponse, ::getQueueByTopic)
@@ -275,7 +277,7 @@ internal class RequestCallArray {
         topic: String,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (ICallback?, Call, Response) -> Unit,
+        callResponse: (IBack?, Call, Response) -> Unit,
         findQueue: (String) -> ConcurrentLinkedQueue<Long>
     ) {
         // 从集合中取得队列
@@ -287,16 +289,22 @@ internal class RequestCallArray {
 
 
         // 完全匹配的反馈
-        callResponse(task.callback, task.request as Call, response)
+        callResponse(task.back, task.listen as Call, response)
     }
 
     /**
      * 取消订阅，根据传入的 关联项，核实该消息是 通过「主题/关键字」订阅，
      * 从对应 topicCalls / keywordCalls 中移除消息ID
      *
-     * @param relation 关联项
+     * @param listen 监听者，通过 Listen 获取RealCall中「请求数据」的relation
      */
-    fun unsubscribe(relation: Relation) {
+    fun unsubscribe(listen: Listen) {
+        if (listen !is RealCall) {
+            return
+        }
+
+        // 请求对象的关联信息
+        val relation = listen.originalRequest.relation
         val keyword = relation.keyword
         // 关键字不存在，则说明必然是订阅主题消息
         if (keyword.isNullOrEmpty()) {

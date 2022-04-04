@@ -1,7 +1,6 @@
 package org.sheedon.mqtt.internal.connection.responsibility
 
 import org.sheedon.mqtt.RequestBody
-import org.sheedon.mqtt.internal.concurrent.CallbackEnum
 import org.sheedon.mqtt.internal.connection.Plan
 import org.sheedon.mqtt.internal.connection.RealCall
 import org.sheedon.mqtt.internal.connection.RealPlan
@@ -58,7 +57,7 @@ class PublishPlan(
         var timeout = DEFAULT_TIMEOUT // 默认超时
         if (callback != null) {
             val bindHandler = dispatcher.bindHandler()
-            val (id, t) = bindHandler.subscribe(call, callback, CallbackEnum.SINGLE)
+            val (id, t) = bindHandler.subscribe(call, callback)
             publishId = id
             timeout = t
         }

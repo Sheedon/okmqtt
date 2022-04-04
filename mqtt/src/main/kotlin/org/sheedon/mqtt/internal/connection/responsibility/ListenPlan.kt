@@ -1,6 +1,5 @@
 package org.sheedon.mqtt.internal.connection.responsibility
 
-import org.sheedon.mqtt.internal.concurrent.CallbackEnum
 import org.sheedon.mqtt.internal.connection.Plan
 import org.sheedon.mqtt.internal.connection.RealObservable
 import org.sheedon.mqtt.internal.connection.RealPlan
@@ -60,11 +59,11 @@ class ListenPlan(
         }
 
         // 添加绑定
-        val callback = call.callback ?: return
+        val callback = call.back ?: return
 
         // 本地分发事件池中订阅分发的绑定行为
         val bindHandler = dispatcher.bindHandler()
-        val ids = bindHandler.subscribe(call, callback, CallbackEnum.RETAIN)
+        val ids = bindHandler.subscribe(call, callback)
         publishIds.addAll(ids)
         executed = true
     }
@@ -89,11 +88,11 @@ class ListenPlan(
         }
 
         // 添加绑定
-        val callback = call.callback ?: return
+        val callback = call.back ?: return
 
         // 本地分发事件池中订阅分发的绑定行为
         val bindHandler = dispatcher.bindHandler()
-        val ids = bindHandler.subscribe(call, callback, CallbackEnum.RETAIN)
+        val ids = bindHandler.subscribe(call, callback)
         publishIds.addAll(ids)
         executed = true
     }
@@ -111,7 +110,7 @@ class ListenPlan(
         if (call !is RealObservable) {
             return
         }
-        if (call.callback == null) {
+        if (call.back == null) {
             return
         }
 

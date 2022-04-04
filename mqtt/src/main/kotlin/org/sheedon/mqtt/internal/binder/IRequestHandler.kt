@@ -43,7 +43,7 @@ interface IRequestHandler {
      * @param listener 操作监听器
      */
     fun subscribe(
-        body: Topics,
+        vararg body: Topics,
         listener: IMqttActionListener? = null
     )
 
@@ -53,7 +53,7 @@ interface IRequestHandler {
      * @param listener 操作监听器
      */
     fun unsubscribe(
-        body: Topics,
+        vararg body: Topics,
         listener: IMqttActionListener? = null
     )
 }

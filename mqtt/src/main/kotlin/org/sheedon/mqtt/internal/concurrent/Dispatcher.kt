@@ -6,9 +6,11 @@ import com.github.yitter.idgen.DefaultIdGenerator
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.sheedon.mqtt.*
 import org.sheedon.mqtt.internal.DataConverter
-import org.sheedon.mqtt.internal.IRelationBinder
 import org.sheedon.mqtt.internal.binder.IBindHandler
 import org.sheedon.mqtt.internal.binder.IResponseHandler
+import org.sheedon.mqtt.internal.connection.Listen
+import org.sheedon.mqtt.internal.connection.RealCall
+import org.sheedon.mqtt.internal.connection.RealObservable
 import org.sheedon.mqtt.internal.log
 import org.sheedon.rr.timeout.DelayEvent.Companion.build
 import org.sheedon.rr.timeout.OnTimeOutListener
@@ -57,27 +59,23 @@ internal class Dispatcher(
      * 并且将作为readyCalls键的ID返回，用于后续取消订阅的动作
      *
      * @param request 请求或监听对象，其一为了响应时反馈请求或订阅信息，其二用于提取关键字，超时时间间隔
-     * @param callback 呼叫对象，用于反馈结果
+     * @param back 呼叫对象，用于反馈结果
      * @param type 呼叫类型，单次订阅/保留订阅
      */
     override fun subscribe(
-        request: IRelationBinder,
-        callback: ICallback,
-        type: CallbackEnum
+        call: RealCall,
+        back: IBack
     ): Pair<Long, Long> {
 
-        log.error("Dispatcher", "subscribe to request: $request and type: $type")
+        log.error("Dispatcher", "subscribe to call: $call and type: ${CallbackEnum.SINGLE}")
 
-        val (id, task) = when (type) {
-            // 单次订阅
-            CallbackEnum.SINGLE -> requestCalls.subscribe(request, callback, ::loadId)
-            // 保留订阅
-            CallbackEnum.RETAIN -> observerCalls.subscribe(request, callback)
-        }
+        val request = call.originalRequest
+
+        val (id, task) = requestCalls.subscribe(call, back, ::loadId)
 
         // 以请求ID为键，以请求任务为值的请求数据池
         readyCalls[id] = task
-        val relation = request.getRelation()
+        val relation = request.relation
 
         // 计算超时时长，若请求中未填，则采用默认超时时长
         val timeout = relation.timeout.let {
@@ -88,12 +86,29 @@ internal class Dispatcher(
         }
 
         // 追加超时事件
-        if (type == CallbackEnum.SINGLE) {
-            appendTimeoutEvent(timeout, id)
-        }
+        appendTimeoutEvent(timeout, id)
 
         // 将ID返回到调度者，以做后续取消订阅动作
         return Pair(id, timeout)
+    }
+
+    /**
+     * 订阅一个主题/关键字，通过传递请求对象/反馈呼叫对象/呼叫类型，转换成「准备就绪任务」，存入 readyCalls 中，
+     * 并且将作为readyCalls键的ID返回，用于后续取消订阅的动作
+     *
+     * @param observable 请求或监听对象，其一为了响应时反馈请求或订阅信息，其二用于提取关键字，超时时间间隔
+     * @param back 呼叫对象，用于反馈结果
+     */
+    override fun subscribe(observable: RealObservable, back: IBack): List<Long> {
+        log.error("Dispatcher", "subscribe to call: $observable and type: ${CallbackEnum.RETAIN}")
+
+        // 将ID返回到调度者，以做后续取消订阅动作
+        return observerCalls.subscribe(
+            observable,
+            back,
+            ::loadId,
+            ::offerReadyCalls
+        )
     }
 
     /**
@@ -109,22 +124,24 @@ internal class Dispatcher(
     }
 
     /**
-     * 根据一个消息ID，取消订阅一个就绪的任务
+     * 根据一个消息ID组，取消订阅一个就绪的任务
      *
-     * @param id 消息ID
+     * @param id 消息ID组
      */
-    override fun unsubscribe(id: Long) {
-        val readyTask = readyCalls.remove(id) ?: return
+    override fun unsubscribe(vararg id: Long) {
+        id.forEach {
+            val readyTask = readyCalls.remove(it) ?: return@forEach
 
-        val request = readyTask.request
-        if (readyTask.type == CallbackEnum.SINGLE) {
-            // 取消超时事件
-            timeoutHandler.removeEvent(id)
-            // 取消单次订阅
-            requestCalls.unsubscribe(request.getRelation())
-        } else if (readyTask.type == CallbackEnum.RETAIN) {
-            // 取消保留订阅
-            observerCalls.unsubscribe(readyTask)
+            val listen = readyTask.listen
+            if (readyTask.type == CallbackEnum.SINGLE) {
+                // 取消超时事件
+                timeoutHandler.removeEvent(it)
+                // 取消单次订阅
+                requestCalls.unsubscribe(listen)
+            } else if (readyTask.type == CallbackEnum.RETAIN) {
+                // 取消保留订阅
+                observerCalls.unsubscribe(readyTask)
+            }
         }
     }
 
@@ -150,6 +167,15 @@ internal class Dispatcher(
     }
 
     /**
+     * 根据消息ID 添加一个就绪的呼叫任务
+     *
+     * @param id 消息ID
+     */
+    private fun offerReadyCalls(id: Long, task: ReadyTask) {
+        readyCalls[id] = task
+    }
+
+    /**
      * 根据消息ID 移除一个就绪的呼叫任务
      *
      * @param id 消息ID
@@ -168,15 +194,17 @@ internal class Dispatcher(
     /**
      * 反馈响应结果，分别核实callback的实现类，并且执行反馈操作
      *
-     * @param callback ICallback
+     * @param back ICallback
      * @param response 响应结果
      */
-    private fun callResponse(callback: ICallback?, binder: IRelationBinder, response: Response) {
-        if (callback == null) return
+    private fun callResponse(back: IBack?, listen: Listen, response: Response) {
+        if (back == null) return
 
         // 反馈为Callback类型
-        if (callback is Callback) {
-            callResponse(callback, binder, response)
+        if (back is Callback) {
+            callResponse(back, listen, response)
+        } else if (back is ObservableBack) {
+            callResponse(back, listen, response)
         }
     }
 
@@ -185,10 +213,22 @@ internal class Dispatcher(
      *
      * @param callback 反馈
      */
-    private fun callResponse(callback: Callback, binder: IRelationBinder, response: Response) {
+    private fun callResponse(callback: Callback, listen: Listen, response: Response) {
         // 响应对象为Request对象
-        if (binder is Request) {
-            callback.onResponse(binder, response)
+        if (listen is RealCall) {
+            callback.onResponse(listen, response)
+        }
+    }
+
+    /**
+     * 响应反馈结果
+     *
+     * @param callback 反馈
+     */
+    private fun callResponse(callback: ObservableBack, listen: Listen, response: Response) {
+        // 响应对象为RealObservable对象
+        if (listen is RealObservable) {
+            callback.onResponse(listen, response)
         }
     }
 
@@ -202,9 +242,9 @@ internal class Dispatcher(
             log.info("Dispatcher", "onTimeout task($readyTask)")
 
             // 移除请求订阅内容
-            requestCalls.unsubscribe(readyTask.request.getRelation())
+            requestCalls.unsubscribe(readyTask.listen)
             // 反馈超时消息
-            readyTask.callback?.onFailure(e)
+            readyTask.back?.onFailure(e)
         }
     }
 

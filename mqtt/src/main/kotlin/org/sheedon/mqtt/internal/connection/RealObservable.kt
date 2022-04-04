@@ -48,7 +48,7 @@ class RealObservable private constructor(
     private var canceled = false
 
 
-    var callback: ICallback? = null
+    var back: IBack? = null
 
 
     /**
@@ -68,7 +68,7 @@ class RealObservable private constructor(
      * @param callback 结果响应，[callback.onFailure] 订阅失败的结果反馈，
      * [callback.onResponse] 订阅成功反馈
      */
-    override fun enqueue(callback: SubscribeCallback?) {
+    override fun enqueue(callback: SubscribeBack?) {
         isSubscribe = true
         enqueueReal(callback)
     }
@@ -94,11 +94,11 @@ class RealObservable private constructor(
      * 3. 监听订阅结果+响应结果
      * 4. callback == null，只是订阅，无需反馈
      */
-    private fun enqueueReal(callback: ICallback?) {
+    private fun enqueueReal(back: IBack?) {
         check(executed.compareAndSet(false, true))
 
-        this.callback = callback
-        this.dispatcher.enqueueRequest(AsyncObservable(callback))
+        this.back = back
+        this.dispatcher.enqueueRequest(AsyncObservable(back))
     }
 
     /**
@@ -107,7 +107,7 @@ class RealObservable private constructor(
      * @param callback 结果响应，[callback.onFailure] 取消订阅失败的结果反馈，
      * [callback.onResponse] 取消订阅成功反馈
      */
-    override fun unsubscribe(callback: SubscribeCallback?) {
+    override fun unsubscribe(callback: SubscribeBack?) {
         isSubscribe = false
         enqueueReal(callback)
     }
@@ -162,7 +162,7 @@ class RealObservable private constructor(
     }
 
     internal inner class AsyncObservable(
-        private val responseCallback: ICallback?
+        private val responseBack: IBack?
     ) : NamedRunnable("AsyncCall %s", originalRequest) {
 
         val request: Request?
@@ -183,7 +183,7 @@ class RealObservable private constructor(
                 return
             }
 
-            val isNeedCallback = responseCallback != null
+            val isNeedCallback = responseBack != null
 
             // 监听请求的流程
             val listenPlan = ListenPlan(this@RealObservable, null)
