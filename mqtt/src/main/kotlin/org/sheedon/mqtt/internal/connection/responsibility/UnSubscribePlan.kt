@@ -11,65 +11,25 @@ import org.sheedon.mqtt.internal.connection.*
 import org.sheedon.mqtt.internal.log
 
 /**
- * 取消订阅职责环节 plan
+ * 订阅职责环节 plan
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2022/3/27 9:48 下午
  */
-class SubscribePlan(
-    observable: Listen,
+class UnSubscribePlan(
+    call: RealObservable,
     nextPlan: Plan?
-) : RealPlan(observable, nextPlan), IMqttActionListener {
+) : RealPlan(call, nextPlan), IMqttActionListener {
 
-    // 是否完成订阅
-    private var subscribed = false
+    // 是否完成取消订阅
+    private var unSubscribed = false
 
 
     /**
-     * 流程执行，按照call类型执行对应调度方法，
-     * 若call是RealCall，则调度proceedRealCall
-     * 若call是RealObservable，则调度proceedRealObservable
+     * 流程执行，取消订阅
      * */
     override fun proceed() {
-        if (call is RealCall) {
-            proceedRealCall(call)
-            return
-        }
-
-        if (call is RealObservable) {
-            proceedRealObservable(call)
-            return
-        }
-
-        throw IllegalAccessException("Not support by call:$call")
-    }
-
-
-    /**
-     * 继续 真实的Call的调度行为
-     *
-     * @param call 真实回调
-     */
-    private fun proceedRealCall(call: RealCall) {
-        if (call.isCanceled()) {
-            log.info("Dispatcher", "subscribePlan to cancel proceed by ${call.originalRequest}")
-            return
-        }
-
-        val request = call.originalRequest
-        log.info("Dispatcher", "subscribePlan to proceed by $request")
-        val relation = request.relation
-        val dispatcher = call.dispatcher
-
-        proceed(relation, dispatcher)
-    }
-
-    /**
-     * 继续 真实的Observable的调度行为
-     *
-     * @param observable 真实观察者
-     */
-    private fun proceedRealObservable(observable: RealObservable) {
+        val observable = call as RealObservable
         // 以Request继续调度流程
         if (observable.originalRequest != null) {
             proceedRequest(observable)
@@ -139,14 +99,14 @@ class SubscribePlan(
 
         // 取消订阅
         val dispatcher = observable.dispatcher
-        dispatcher.requestHandler().subscribe(*topicArray.toTypedArray())
+        dispatcher.requestHandler().unsubscribe(*topicArray.toTypedArray())
     }
 
 
     /**
      * 根据「relation」和「dispatcher」调度流程
      *
-     * @param relation 关联对象，若存在订阅主题，并且订阅类型为远程订阅，则执行订阅mqtt流程，否则执行下一个流程
+     * @param relation 关联对象，若存在订阅主题，并且订阅类型为远程订阅，则执行取消订阅mqtt流程
      * @param dispatcher 调度管理者，执行请求行为
      * */
     private fun proceed(relation: Relation, dispatcher: IDispatchManager) {
@@ -159,27 +119,27 @@ class SubscribePlan(
             super.proceed()
             return
         }
-        // 订阅主题
-        dispatcher.requestHandler().subscribe(relation.topics!!, listener = this)
+        // 取消订阅主题
+        dispatcher.requestHandler().unsubscribe(relation.topics!!, listener = this)
     }
 
     /**
-     * 取消订阅
+     * 取消「取消订阅」
      */
     override fun cancel() {
-        if (subscribed) {
-            unSubscribe()
+        if (unSubscribed) {
+            subscribe()
         }
         super.cancel()
     }
 
     /**
-     * 订阅成功
+     * 取消订阅成功
      */
     override fun onSuccess(asyncActionToken: IMqttToken?) {
-        subscribed = true
+        unSubscribed = true
         if (call.isCanceled()) {
-            unSubscribe()
+            subscribe()
             return
         }
 
@@ -204,50 +164,26 @@ class SubscribePlan(
      * 订阅失败
      */
     override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-        if (call is RealCall) {
-            call.callback?.onFailure(exception)
-        } else if (call is RealObservable) {
+        if (call is RealObservable) {
             call.callback?.onFailure(exception)
         }
     }
 
     /**
-     * 取消订阅
-     * unSubscribeByRealCall：对 RealCall 取消订阅
-     * unSubscribeByRealObservable：对 RealObservable 取消订阅
-     */
-    private fun unSubscribe() {
-        if (call is RealCall) {
-            unSubscribeByRealCall(call)
-        } else if (call is RealObservable) {
-            unSubscribeByRealObservable(call)
-        }
-    }
-
-    /**
-     * 取消订阅RealCall所发起的请求行为
-     * */
-    private fun unSubscribeByRealCall(call: RealCall) {
-        val request = call.originalRequest
-        log.info("Dispatcher", "subscribePlan to cancel by $request")
-        val relation = request.relation
-        val dispatcher = call.dispatcher
-        dispatcher.requestHandler().unsubscribe(relation.topics!!)
-    }
-
-    /**
-     * 取消订阅 RealObservable 所发起的请求行为
+     * 订阅 RealObservable 所发起的请求行为
      *
-     * @param observable 真实的观察者对象，将内部的request/subscribe取消订阅
+     * @param observable 真实的观察者对象，将内部的request/subscribe订阅
      * */
-    private fun unSubscribeByRealObservable(observable: RealObservable) {
+    private fun subscribe() {
+        val observable = call as RealObservable
+
         // request 取消订阅行为
         val request = observable.originalRequest
         if (request != null) {
             log.info("Dispatcher", "subscribePlan to cancel by $request")
             val relation = request.relation
             val dispatcher = observable.dispatcher
-            dispatcher.requestHandler().unsubscribe(relation.topics!!)
+            dispatcher.requestHandler().subscribe(relation.topics!!)
             return
         }
 
@@ -262,8 +198,8 @@ class SubscribePlan(
         }?.run {
             // 取消订阅
             val dispatcher = observable.dispatcher
-            dispatcher.requestHandler().unsubscribe(*this.toTypedArray())
+            dispatcher.requestHandler().subscribe(*this.toTypedArray())
         }
-
     }
+
 }

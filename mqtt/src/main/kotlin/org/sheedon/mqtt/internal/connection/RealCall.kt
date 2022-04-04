@@ -111,7 +111,7 @@ class RealCall(
             val publishPlan = PublishPlan(this@RealCall, null)
 
             planChain = if (isNeedCallback) {
-                SubscribePlan(this@RealCall, publishPlan, originalRequest, dispatcher)
+                SubscribePlan(this@RealCall, publishPlan)
             } else {
                 publishPlan
             }

@@ -23,6 +23,8 @@ class PublishPlan(
     private var publishId: Long? = null
 
     override fun proceed() {
+        check(call is RealCall) { "call must RealCall in PublishPlan" }
+
         if (call.isCanceled()) {
             log.info("Dispatcher", "publishPlan to cancel proceed by ${call.originalRequest}")
             return
@@ -99,6 +101,9 @@ class PublishPlan(
      * 解除绑定
      */
     private fun unBind() {
+        if (call !is RealCall) {
+            return
+        }
         if (call.callback == null) {
             return
         }

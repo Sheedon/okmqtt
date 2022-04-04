@@ -8,7 +8,7 @@ package org.sheedon.mqtt.internal.connection
  * @Date: 2022/3/27 9:18 下午
  */
 open class RealPlan(
-    internal val call: RealCall,
+    internal val call: Listen,
     private val nextPlan: Plan?
 ) : Plan {
 
