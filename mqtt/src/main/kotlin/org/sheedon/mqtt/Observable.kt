@@ -1,44 +1,71 @@
+/*
+ * Copyright (C) 2022 Sheedon.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.sheedon.mqtt
 
-import org.sheedon.mqtt.listener.Callback
+import org.sheedon.mqtt.internal.connection.Listen
 
 /**
- * 订阅
+ * Observations are messages for which subscriptions are specified. The message can be cancelled.
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
- * @Date: 2022/3/9 10:38 下午
+ * @Date: 2022/1/30 8:12 下午
  */
-interface Observable {
+interface Observable : Listen {
 
     /**
-     * 订阅，指代于需要订阅的任务
+     * Use the Callback in the protocol
      *
-     * @param callback 反馈内容
+     * @param callback Callback
      */
-    fun subscribe(callback: Callback?)
+    fun enqueue(callback: Callback)
 
     /**
-     * 取消订阅，指代于需要取消订阅的任务
+     * Use the SubscribeCallback in the protocol
      *
-     * @param callback 反馈内容
+     * @param callback SubscribeCallback
      */
-    fun unsubscribe(callback: Callback?)
-
+    fun enqueue(callback: SubscribeBack?)
 
     /**
-     * 获取订阅数据
+     * Use the FullCallback in the protocol
      *
-     * @return Subscribe 订阅信息
+     * @param callback SubscribeCallback
      */
-    fun subscribes(): List<Subscribe>
+    fun enqueue(callback: FullCallback)
 
     /**
-     * 消息是否取消
+     * Unsubscribe from a topic, not necessarily after subscribe
+     *
+     * @param callback SubscribeCallback
      */
-    fun isCanceled(): Boolean
+    fun unsubscribe(callback: SubscribeBack?)
+
 
     /**
-     * 取消任务
+     * get request information
+     *
+     * @return Request information
      */
-    fun cancel()
+    fun request(): Request
+
+    /**
+     * get subscription information
+     *
+     * @return Subscribe information
+     */
+    fun subscribe(): Subscribe
 }

@@ -41,12 +41,13 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.3.2'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.10'
     implementation 'androidx.appcompat:appcompat:1.3.1'
+    implementation 'com.github.yitter:yitter-idgenerator:1.0.6'
     // mqtt
     api 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.1'
     api 'org.eclipse.paho:org.eclipse.paho.android.service:1.1.1'
 
     // 请求响应模式
-    api 'com.github.Sheedon.RequestResponseBinder:rr-dispatcher:0.2.7.b-alpha'
+//    api 'com.github.Sheedon.RequestResponseBinder:rr-dispatcher:0.2.7.b-alpha'
 //    api 'org.sheedon.requestresponsebinder:rr-dispatcher:1.0-SNAPSHOT'
     // android 环境下的超时处理者，java环境下正在开发中
     api 'com.github.Sheedon.RequestResponseBinder:rr-timeout-android:0.2.7.b-alpha'

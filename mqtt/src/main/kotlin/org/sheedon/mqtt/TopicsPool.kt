@@ -12,7 +12,7 @@ import java.lang.StringBuilder
 const val ROOT_NAME = "org.sheedon.mqtt.root"
 const val REGEX = "/"
 
-class SubscribePool {
+class TopicsPool {
 
     // 根节点
     val rootNote: ObservableNote = ObservableNote(ROOT_NAME)

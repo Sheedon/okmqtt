@@ -22,13 +22,11 @@ import org.eclipse.paho.android.service.MqttAndroidClient
 import kotlin.Throws
 import org.eclipse.paho.android.service.MqttAndroidClient.Ack
 import org.eclipse.paho.client.mqttv3.*
+import org.sheedon.mqtt.internal.binder.IResponseHandler
 import org.sheedon.mqtt.listener.*
 import org.sheedon.mqtt.utils.Logger
-import org.sheedon.rr.core.DispatchAdapter
-import org.sheedon.rr.core.IRequestSender
 import java.lang.Exception
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * Real mqtt wrapper scheduling client
@@ -38,8 +36,9 @@ import kotlin.collections.ArrayList
  * @Date: 2022/1/27 10:19 上午
  */
 class MqttWrapperClient private constructor(
-    builder: Builder = Builder()
-) : IRequestSender {
+    builder: Builder = Builder(),
+    _responseHandler: IResponseHandler
+) {
     // 锁
     private val lock = Any()
 
@@ -68,8 +67,8 @@ class MqttWrapperClient private constructor(
     private val subscribeListener: IActionListener? = builder.subscribeListener
     private val autoSubscribe: Boolean = builder.autoSubscribe
 
-    // 数据交换中介
-    internal var switchMediator: DispatchAdapter<RequestBody, ResponseBody>? = null
+    // 响应结果处理者
+    internal var responseHandler: IResponseHandler = _responseHandler
 
     // 自动注册主题
     internal val autoRegister = builder.autoRegister
@@ -177,7 +176,7 @@ class MqttWrapperClient private constructor(
          * */
         private fun autoSubscribe() {
 
-            val subscribeBodies = wildcardFiller.subscribeBodies
+            val subscribeBodies = wildcardFiller.topicsBodies
             if (subscribeBodies.isEmpty()) return
 
             val topic = mutableListOf<String>()
@@ -193,7 +192,7 @@ class MqttWrapperClient private constructor(
         @Throws(Exception::class)
         override fun messageArrived(topic: String, message: MqttMessage) {
             messageListener?.messageArrived(topic, message)
-            switchMediator?.callResponse(ResponseBody(topic, message))
+            responseHandler.callResponse(topic, message)
         }
 
         override fun deliveryComplete(token: IMqttDeliveryToken) {
@@ -216,13 +215,6 @@ class MqttWrapperClient private constructor(
 
         mqttClient.setCallback(callbackListener)
         reConnect()
-    }
-
-    /**
-     * 绑定数据交换中介者
-     * */
-    internal fun bindDispatchAdapter(switchMediator: DispatchAdapter<RequestBody, ResponseBody>) {
-        this.switchMediator = switchMediator
     }
 
     /**
@@ -340,11 +332,11 @@ class MqttWrapperClient private constructor(
      */
     @JvmOverloads
     fun subscribe(
-        body: Subscribe,
+        body: Topics,
         listener: IMqttActionListener? = null
     ) {
         // 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
-        if (body.attachRecord) {
+        if (body.headers.attachRecord) {
             wildcardFiller.subscribe(body, this)
         }
         mqttClient.subscribe(body.topic, body.qos, null, object : IMqttActionListener {
@@ -371,7 +363,7 @@ class MqttWrapperClient private constructor(
      */
     @JvmOverloads
     fun subscribe(
-        bodies: List<Subscribe>,
+        bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
 
@@ -411,10 +403,10 @@ class MqttWrapperClient private constructor(
      */
     @JvmOverloads
     fun unsubscribe(
-        body: Subscribe,
+        body: Topics,
         listener: IMqttActionListener? = null
     ) {
-        if (body.attachRecord) {
+        if (body.headers.attachRecord) {
             //是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
             wildcardFiller.unsubscribe(body, this)
         }
@@ -442,7 +434,7 @@ class MqttWrapperClient private constructor(
      */
     @JvmOverloads
     fun unsubscribe(
-        bodies: List<Subscribe>,
+        bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
         val topic = wildcardFiller.unsubscribe(bodies, this)
@@ -485,7 +477,7 @@ class MqttWrapperClient private constructor(
      */
     @JvmOverloads
     fun reSubscribe(
-        bodies: List<Subscribe>,
+        bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
         unsubscribe(bodies, object : IMqttActionListener {
@@ -511,7 +503,7 @@ class MqttWrapperClient private constructor(
      * @param listener 操作监听器
      */
     private fun reSubscribeBySuccess(
-        bodies: List<Subscribe>,
+        bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
 
@@ -546,11 +538,6 @@ class MqttWrapperClient private constructor(
         return mqttClient.publish(topic, message)
     }
 
-    fun newObservable(request: List<Subscribe>): Observable {
-        return RealObserver(this, request)
-    }
-
-
     class Builder {
         // mqtt的Android客户端
         internal var androidClient: MqttAndroidClient? = null
@@ -583,7 +570,7 @@ class MqttWrapperClient private constructor(
         internal var connectListener: IActionListener? = null
 
         // 订阅信息
-        internal var subscribeBodies = mutableMapOf<String, Subscribe>()
+        internal var subscribeBodies = mutableMapOf<String, Topics>()
 
         // 订阅情况监听器
         internal var subscribeListener: IActionListener? = null
@@ -692,7 +679,7 @@ class MqttWrapperClient private constructor(
         /**
          * Sets the default subscribe info for this client and bind listener
          *
-         * @param subscribeBodies Subscribe topic and qos
+         * @param topicsBodies Subscribe topic and qos
          * @param subscribeListener The subscribe action listener
          * @param autoSubscribe Whether to subscribe automatically after reconnect
          * @return Builder
@@ -701,10 +688,10 @@ class MqttWrapperClient private constructor(
         fun subscribeBodies(
             subscribeListener: IActionListener? = null,
             autoSubscribe: Boolean = false,
-            vararg subscribeBodies: Subscribe
+            vararg topicsBodies: Topics
         ) = apply {
             this.subscribeBodies.clear()
-            subscribeBodies.forEach {
+            topicsBodies.forEach {
                 this.subscribeBodies[it.convertKey()] = it
             }
             this.subscribeListener = subscribeListener
@@ -739,12 +726,12 @@ class MqttWrapperClient private constructor(
          *
          * @return MqttWrapperClient
          */
-        fun build(): MqttWrapperClient {
+        fun build(responseHandler: IResponseHandler): MqttWrapperClient {
 
             // If androidClient is not null,
             // it means that the developer wants to use the MqttAndroidClient created by himself
             if (androidClient != null) {
-                return MqttWrapperClient(this)
+                return MqttWrapperClient(this, responseHandler)
             }
 
             // Otherwise, create it according to the configuration content
@@ -757,7 +744,7 @@ class MqttWrapperClient private constructor(
             clientId = if (clientId.isNullOrEmpty()) UUID.randomUUID().toString() else clientId
             this.ackType = ackType ?: Ack.AUTO_ACK
             androidClient = MqttAndroidClient(context, serverURI, clientId, persistence, ackType)
-            return MqttWrapperClient(this)
+            return MqttWrapperClient(this, responseHandler)
         }
     }
 }

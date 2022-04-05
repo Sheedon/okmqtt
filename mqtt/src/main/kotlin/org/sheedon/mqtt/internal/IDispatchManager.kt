@@ -3,7 +3,7 @@ package org.sheedon.mqtt.internal
 import org.sheedon.mqtt.Response
 import org.sheedon.mqtt.internal.binder.IBindHandler
 import org.sheedon.mqtt.internal.binder.IRequestHandler
-import org.sheedon.mqtt.internal.binder.IResponseConverter
+import org.sheedon.mqtt.internal.concurrent.EventBehavior
 
 /**
  * 作为「请求响应模式」下，请求和反馈信息的输入。
@@ -20,28 +20,13 @@ interface IDispatchManager {
     fun requestHandler(): IRequestHandler
 
     /**
-     * 响应结果转换器
+     * 事件执行者，提供请求和响应的调度方法，将事件放入异步执行
      */
-    fun responseConverter(): IResponseConverter
-
-    /**
-     * 将请求行为入队，按预定策略去执行请求动作
-     *
-     * @param runnable 处理事件
-     */
-    fun enqueueRequest(runnable: Runnable)
+    fun eventBehavior(): EventBehavior
 
     /**
      * 绑定处理者，处理响应关键字和Callback的关联
      */
     fun bindHandler(): IBindHandler
-
-
-    /**
-     * 反馈结果监听
-     *
-     * @param response 反馈结果
-     */
-    fun onResponse(response: Response)
 
 }

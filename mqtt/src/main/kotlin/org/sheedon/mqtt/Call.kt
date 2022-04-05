@@ -47,20 +47,4 @@ interface Call : Listen {
      * 请求提交，标志着这个请求无需监听反馈
      */
     fun publish()
-
-    /**
-     * 消息是否取消
-     */
-    fun isCanceled(): Boolean
-
-    /**
-     * 取消任务
-     */
-    fun cancel()
-
-    /**
-     * 是否被执行完成
-     */
-    fun isExecuted(): Boolean
-
 }

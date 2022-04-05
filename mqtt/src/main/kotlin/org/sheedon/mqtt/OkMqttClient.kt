@@ -18,11 +18,16 @@ package org.sheedon.mqtt
 import android.content.Context
 import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
+import org.sheedon.mqtt.internal.DataConverter
+import org.sheedon.mqtt.internal.binder.IBindHandler
+import org.sheedon.mqtt.internal.binder.IRequestHandler
+import org.sheedon.mqtt.internal.binder.IResponseHandler
+import org.sheedon.mqtt.internal.binder.MqttRequestHandler
+import org.sheedon.mqtt.internal.concurrent.EventBehavior
+import org.sheedon.mqtt.internal.log
 import org.sheedon.mqtt.listener.*
 import org.sheedon.mqtt.template.ILogger
 import org.sheedon.mqtt.utils.Logger
-import org.sheedon.rr.core.*
-import org.sheedon.rr.dispatcher.Dispatcher
 import org.sheedon.rr.timeout.TimeoutManager
 
 /**
@@ -42,28 +47,17 @@ class OkMqttClient internal constructor(
     constructor() : this(Builder())
 
     init {
-        val requestAdapter = mqttRRBinderClient.dispatchManager.requestAdapter()
-        requestAdapter!!.bindSender(mqttClient)
-
-        mqttClient.bindDispatchAdapter(mqttRRBinderClient.switchMediator)
-
+        val requestHandler = mqttRRBinderClient.requestHandler()
+        if (requestHandler is MqttRequestHandler) {
+            requestHandler.attachClient(mqttClient)
+        }
     }
 
     /**
      * 默认超时时间单位（秒）
      */
     fun getDefaultTimeout(): Int {
-        return mqttRRBinderClient.getTimeout()
-    }
-
-    /**
-     * 创建请求响应的Call
-     *
-     * @param request 请求对象
-     * @return Call 用于执行入队/提交请求的动作
-     */
-    fun newCall(request: IRequest<String, RequestBody>): Call {
-        return mqttRRBinderClient.newCall(request)
+        return mqttRRBinderClient.timeout
     }
 
     /**
@@ -77,43 +71,23 @@ class OkMqttClient internal constructor(
     }
 
     /**
-     * 创建mqtt订阅Observable
-     *
-     * @param request 订阅对象
-     * @return Call 用于执行入队/提交请求的动作
-     */
-    override fun newObservable(request: Subscribe): Observable {
-        return mqttClient.newObservable(listOf(request))
-    }
-
-    /**
-     * 创建请求响应的Call
-     *
-     * @param request 请求对象
-     * @return Call 用于执行入队/提交请求的动作
-     */
-    override fun newObservable(request: List<Subscribe>): Observable {
-        return mqttClient.newObservable(request)
-    }
-
-    /**
      * 创建信息的观察者 Listener
      *
      * @param request 请求对象
      * @return Listener 订阅某个主题，监听该主题的消息
      */
-    override fun newListen(request: Request): Listener {
-        return mqttRRBinderClient.newObservable(this, request)
+    override fun newObservable(request: Request): Observable {
+        return mqttRRBinderClient.newObservable(request)
     }
 
     /**
-     * 创建信息的监听者
+     * 创建信息的观察者 Listener
      *
-     * @param request 请求对象
-     * @return Observable 订阅某个主题，监听该主题的消息
+     * @param subscribe 订阅对象
+     * @return Listener 订阅某个主题，监听该主题的消息
      */
-    fun newListen(request: IRequest<String, RequestBody>): Listener {
-        return mqttRRBinderClient.newObservable(this, request)
+    override fun newObservable(subscribe: Subscribe): Observable {
+        return mqttRRBinderClient.newObservable(subscribe)
     }
 
     /**
@@ -139,7 +113,7 @@ class OkMqttClient internal constructor(
      */
     @JvmOverloads
     fun subscribe(
-        body: Subscribe,
+        body: Topics,
         listener: IMqttActionListener? = null
     ) {
         this.mqttClient.subscribe(body, listener)
@@ -152,7 +126,7 @@ class OkMqttClient internal constructor(
      */
     @JvmOverloads
     fun subscribe(
-        bodies: List<Subscribe>,
+        bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
         this.mqttClient.subscribe(bodies, listener)
@@ -165,7 +139,7 @@ class OkMqttClient internal constructor(
      */
     @JvmOverloads
     fun unsubscribe(
-        body: Subscribe,
+        body: Topics,
         listener: IMqttActionListener? = null
     ) {
         this.mqttClient.unsubscribe(body, listener)
@@ -178,7 +152,7 @@ class OkMqttClient internal constructor(
      */
     @JvmOverloads
     fun unsubscribe(
-        bodies: List<Subscribe>,
+        bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
         this.mqttClient.unsubscribe(bodies, listener)
@@ -192,7 +166,7 @@ class OkMqttClient internal constructor(
      */
     @JvmOverloads
     fun reSubscribe(
-        bodies: List<Subscribe>,
+        bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
         this.mqttClient.reSubscribe(bodies, listener)
@@ -243,15 +217,6 @@ class OkMqttClient internal constructor(
         }
 
         /**
-         * 设置用于设置策略和执行异步请求的调度程序。不能为null。
-         *
-         * @param dispatcher 请求响应执行者
-         */
-        fun dispatcher(dispatcher: Dispatcher<String, String, RequestBody, ResponseBody>) = apply {
-            this.mqttRRBinderBuilder.dispatcher(dispatcher)
-        }
-
-        /**
          * 设置信息请求超时时间（单位秒）
          *
          * @param timeout 超时时间
@@ -260,16 +225,6 @@ class OkMqttClient internal constructor(
         fun messageTimeout(timeout: Int) = apply {
             if (timeout < 0) return this
             this.mqttRRBinderBuilder.messageTimeout(timeout)
-        }
-
-        /**
-         * 设置行为服务环境集合
-         *
-         * @param behaviorServices 执行服务环境集合
-         * @return Builder<BackTopic></BackTopic>, ID>
-         */
-        fun behaviorServices(behaviorServices: MutableList<EventBehavior>) = apply {
-            this.mqttRRBinderBuilder.behaviorServices(behaviorServices)
         }
 
         /**
@@ -283,88 +238,61 @@ class OkMqttClient internal constructor(
         }
 
         /**
-         * 设置事件管理集合
-         *
-         * @param eventManagerPool 事件管理集合
-         * @return Builder<BackTopic></BackTopic>, ID>
-         */
-        fun eventManagerPool(eventManagerPool: MutableList<EventManager<String, String, RequestBody, ResponseBody>>) =
-            apply {
-                this.mqttRRBinderBuilder.eventManagerPool(eventManagerPool)
-            }
-
-        /**
-         * 设置事件管理
-         *
-         * @param eventManager 事件管理
-         * @return Builder<BackTopic></BackTopic>, ID>
-         */
-        fun eventManager(eventManager: EventManager<String, String, RequestBody, ResponseBody>) =
-            apply {
-                this.mqttRRBinderBuilder.eventManager(eventManager)
-            }
-
-        /**
          * 设置超时处理者
          *
          * @param timeoutManager 事件管理
          * @return Builder<BackTopic></BackTopic>, ID>
          */
-        fun timeoutManager(timeoutManager: TimeoutManager<String>) = apply {
+        fun timeoutManager(timeoutManager: TimeoutManager<Long>) = apply {
             this.mqttRRBinderBuilder.timeoutManager(timeoutManager)
         }
 
         /**
-         * 设置调度调度适配者
+         * 设置请求调度者
          *
-         * @param dispatchAdapter 调度适配者
-         * @return Builder<BackTopic></BackTopic>, ID>
+         * @param requestHandler 请求调度者
          */
-        fun dispatchAdapter(dispatchAdapter: DispatchAdapter<RequestBody, ResponseBody>) = apply {
-            this.mqttRRBinderBuilder.dispatchAdapter(dispatchAdapter)
+        fun requestAdapter(requestHandler: IRequestHandler) = apply {
+            this.mqttRRBinderBuilder.requestHandler(requestHandler)
         }
 
         /**
-         * 设置请求适配者
+         * 设置绑定调度者
          *
-         * @param requestAdapter 请求适配者
-         * @return Builder<BackTopic></BackTopic>, ID>
+         * @param requestHandler 请求和响应绑定处理程序
          */
-        fun requestAdapter(requestAdapter: RequestAdapter<RequestBody>) = apply {
-            this.mqttRRBinderBuilder.requestAdapter(requestAdapter)
+        fun bindHandler(bindHandler: IBindHandler) = apply {
+            this.mqttRRBinderBuilder.bindHandler(bindHandler)
         }
 
         /**
-         * 设置反馈主题转换器集合
+         * 设置 mqtt 响应处理程序
          *
-         * @param backTopicConverters 反馈主题转换器集合
-         * @return Builder<BackTopic></BackTopic>, ID>
+         * @param requestHandler 响应绑定处理程序
          */
-        fun backTopicConverters(backTopicConverters: MutableList<DataConverter<ResponseBody, String>>) =
+        fun responseHandler(responseHandler: IResponseHandler) = apply {
+            this.mqttRRBinderBuilder.responseHandler(responseHandler)
+        }
+
+        /**
+         * 设置反馈关键字转换器集合
+         *
+         * @param keywordConverters 反馈主题转换器集合
+         */
+        fun keywordConverters(keywordConverters: List<DataConverter<ResponseBody, String>>) =
             apply {
-                this.mqttRRBinderBuilder.backTopicConverters(backTopicConverters)
+                this.mqttRRBinderBuilder.keywordConverters(keywordConverters)
             }
 
         /**
-         * 设置反馈主题转换器
+         * 设置反馈关键字转换器
          *
          * @param backTopicConverter 反馈主题转换器
-         * @return Builder<BackTopic></BackTopic>, ID>
          */
-        fun addBackTopicConverter(backTopicConverter: DataConverter<ResponseBody, String>) =
+        fun keywordConverter(keywordConverter: DataConverter<ResponseBody, String>) =
             apply {
-                this.mqttRRBinderBuilder.addBackTopicConverter(backTopicConverter)
+                this.mqttRRBinderBuilder.keywordConverter(keywordConverter)
             }
-
-        /**
-         * 设置响应调度适配者
-         *
-         * @param responseAdapter 响应调度适配者
-         * @return Builder<BackTopic></BackTopic>, ID>
-         */
-        fun responseAdapter(responseAdapter: ResponseAdapter<String, ResponseBody>) = apply {
-            this.mqttRRBinderBuilder.responseAdapter(responseAdapter)
-        }
 
         /**
          * Enables an android application to communicate with an MQTT server using non-blocking methods.
@@ -451,7 +379,7 @@ class OkMqttClient internal constructor(
         /**
          * Sets the default subscribe info for this client and bind listener
          *
-         * @param subscribeBodies Subscribe topic and qos
+         * @param topicsBodies Subscribe topic and qos
          * @param subscribeListener The subscribe action listener
          * @param autoSubscribe Whether to subscribe automatically after reconnect
          * @return Builder
@@ -460,9 +388,9 @@ class OkMqttClient internal constructor(
         fun subscribeBodies(
             subscribeListener: IActionListener? = null,
             autoSubscribe: Boolean = false,
-            vararg subscribeBodies: Subscribe
+            vararg topicsBodies: Topics
         ) = apply {
-            this.mqttBuilder.subscribeBodies(subscribeListener, autoSubscribe, *subscribeBodies)
+            this.mqttBuilder.subscribeBodies(subscribeListener, autoSubscribe, *topicsBodies)
         }
 
         /**
@@ -474,7 +402,7 @@ class OkMqttClient internal constructor(
         @JvmOverloads
         fun openLog(showMqttLog: Boolean, openRRBindLog: Boolean = false) = apply {
             Logger.showLog(showMqttLog)
-            this.mqttRRBinderBuilder.openLog(openRRBindLog)
+            log.showLog(openRRBindLog)
         }
 
         /**
@@ -486,7 +414,7 @@ class OkMqttClient internal constructor(
         @JvmOverloads
         fun openStackTrace(isShowStackTrace: Boolean, openRRBindTrace: Boolean = false) = apply {
             Logger.showStackTrace(isShowStackTrace)
-            this.mqttRRBinderBuilder.openStackTrace(openRRBindTrace)
+            log.showStackTrace(openRRBindTrace)
         }
 
         /**
@@ -527,7 +455,7 @@ class OkMqttClient internal constructor(
                 mqttRRBinderClient = mqttRRBinderBuilder.build()
             }
             if (mqttClient == null) {
-                mqttClient = mqttBuilder.build()
+                mqttClient = mqttBuilder.build(mqttRRBinderClient!!.responseHandler)
             }
 
             return OkMqttClient(this)

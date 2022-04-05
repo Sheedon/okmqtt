@@ -11,7 +11,7 @@ import kotlin.jvm.Throws
  * @Date: 2022/3/7 10:52 下午
  */
 class Relation private constructor(
-    @get:JvmName("subscribe") val topics: Topics? = null,// 需要订阅的集合
+    @get:JvmName("topics") val topics: Topics? = null,// 需要订阅的集合
     @get:JvmName("keyword") val keyword: String? = null,// 订阅到关键字
     @get:JvmName("timeout") val timeout: Long? = null,// 超时时长
 ) {
@@ -61,10 +61,10 @@ class Relation private constructor(
          * @return Builder
          */
         @Throws(IllegalStateException::class)
-        open fun subscribe(topics: Topics) = apply {
+        open fun topics(topics: Topics) = apply {
             this.getSubscribe = true
             if (getKeyWork) {
-                throw IllegalStateException("Only one of them can be selected keyword and subscribe")
+                throw IllegalStateException("Only one of them can be selected keyword and topics")
             }
             this.topics = topics
         }
@@ -78,7 +78,7 @@ class Relation private constructor(
         open fun keyword(keyword: String) = apply {
             this.getKeyWork = true
             if (getSubscribe) {
-                throw IllegalStateException("Only one of them can be selected keyword and subscribe")
+                throw IllegalStateException("Only one of them can be selected keyword and topics")
             }
             this.keyword = keyword
         }

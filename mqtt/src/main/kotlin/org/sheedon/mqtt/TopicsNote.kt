@@ -7,8 +7,8 @@ package org.sheedon.mqtt
  * @Email: sheedonsun@163.com
  * @Date: 2022/2/26 8:16 下午
  */
-class SubscribeNote(val noteName: String) {
+class TopicsNote(val noteName: String) {
     internal var enable: Boolean = false
-    internal val child: MutableMap<String, SubscribeNote> = mutableMapOf()
+    internal val child: MutableMap<String, TopicsNote> = mutableMapOf()
 
 }

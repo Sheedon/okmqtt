@@ -17,11 +17,11 @@ package org.sheedon.mqtt.internal.connection
 
 import org.sheedon.mqtt.*
 import org.sheedon.mqtt.internal.IDispatchManager
+import org.sheedon.mqtt.internal.concurrent.NamedRunnable
 import org.sheedon.mqtt.internal.connection.responsibility.ListenPlan
 import org.sheedon.mqtt.internal.connection.responsibility.SubscribePlan
 import org.sheedon.mqtt.internal.connection.responsibility.UnSubscribePlan
 import org.sheedon.mqtt.internal.log
-import org.sheedon.rr.core.NamedRunnable
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -98,7 +98,8 @@ class RealObservable private constructor(
         check(executed.compareAndSet(false, true))
 
         this.back = back
-        this.dispatcher.enqueueRequest(AsyncObservable(back))
+        val eventBehavior = this.dispatcher.eventBehavior()
+        eventBehavior.enqueueRequestEvent(AsyncObservable(back))
     }
 
     /**
@@ -214,7 +215,7 @@ class RealObservable private constructor(
          * @param originalRequest 真实的请求
          * @return Observable 观察执行职责
          * */
-        fun newRealObservable(
+        fun newObservable(
             dispatcher: IDispatchManager,
             originalRequest: Request
         ): Observable {
@@ -229,7 +230,7 @@ class RealObservable private constructor(
          * @param originalSubscribe 真实订阅对象
          * @return Observable 观察执行职责
          * */
-        fun newRealObservable(
+        fun newObservable(
             dispatcher: IDispatchManager,
             originalSubscribe: Subscribe
         ): Observable {

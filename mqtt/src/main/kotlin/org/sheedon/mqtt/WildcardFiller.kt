@@ -9,26 +9,26 @@ package org.sheedon.mqtt
  * @Date: 2022/2/25 5:58 下午
  */
 internal class WildcardFiller @JvmOverloads constructor(
-    var subscribeBodies: MutableMap<String, Subscribe> = mutableMapOf(),
+    var topicsBodies: MutableMap<String, Topics> = mutableMapOf(),
     val subscribeOptimize: Boolean = false
 ) {
 
-    private val fillerBodies: MutableMap<String, Subscribe> = mutableMapOf()
-    private val rootNote = SubscribeNote("root")
+    private val fillerBodies: MutableMap<String, Topics> = mutableMapOf()
+    private val rootNote = TopicsNote("root")
 
     /**
      * 订阅主题
      *
      * @param body 单项订阅内容
      */
-    internal fun subscribe(body: Subscribe, client: MqttWrapperClient) {
-        subscribeBodies
+    internal fun subscribe(body: Topics, client: MqttWrapperClient) {
+        topicsBodies
             .takeUnless {
-                subscribeBodies.containsKey(body.convertKey()) || !needSubscribe(body)
+                topicsBodies.containsKey(body.convertKey()) || !needSubscribe(body)
             }?.let {
                 it[body.convertKey()] = body
             }?.also {
-                var filter: Set<Subscribe> = emptySet()
+                var filter: Set<Topics> = emptySet()
                 body.topic.also {
                     if (it.endsWith("#")) {
                         filter = filterByWildcard1(it)
@@ -49,22 +49,22 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param bodies 订阅内容集合
      */
     internal fun subscribe(
-        bodies: List<Subscribe>,
+        bodies: List<Topics>,
         client: MqttWrapperClient
     ): Pair<List<String>, List<Int>> {
 
         val topic = mutableListOf<String>()
         val qos = mutableListOf<Int>()
-        val filter: MutableSet<Subscribe> = mutableSetOf()
+        val filter: MutableSet<Topics> = mutableSetOf()
 
         bodies.forEach { body ->
-            subscribeBodies.takeIf {
-                !subscribeBodies.containsKey(body.convertKey()) && needSubscribe(body)
+            topicsBodies.takeIf {
+                !topicsBodies.containsKey(body.convertKey()) && needSubscribe(body)
             }?.also {
                 topic.add(body.topic)
                 qos.add(body.qos)
-            }.takeIf {
-                body.attachRecord
+            }?.takeIf {
+                body.headers.attachRecord
             }?.let {
                 it[body.convertKey()] = body
                 body
@@ -91,23 +91,23 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 过滤通配符「#」
      * 当新增的主题后缀为#，要过滤能用该通配符匹配的主题
      */
-    private fun filterByWildcard1(topic: String): MutableSet<Subscribe> {
+    private fun filterByWildcard1(topic: String): MutableSet<Topics> {
         val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<Subscribe>()
+        val result = mutableSetOf<Topics>()
 
-        val iterator = subscribeBodies.keys.iterator()
+        val iterator = topicsBodies.keys.iterator()
         while (iterator.hasNext()) {
             val key = iterator.next()
             if (key.startsWith(target)) {
-                result.add(subscribeBodies[key]!!)
-                fillerBodies[key] = subscribeBodies[key]!!
+                result.add(topicsBodies[key]!!)
+                fillerBodies[key] = topicsBodies[key]!!
                 iterator.remove()
-                subscribeBodies.remove(key)
+                topicsBodies.remove(key)
             }
         }
         fillerBodies[topic]?.also {
             result.remove(it)
-            subscribeBodies[topic] = it
+            topicsBodies[topic] = it
         }
         fillerBodies.remove(topic)
         return result
@@ -117,24 +117,24 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 过滤通配符「+」
      * 当新增的主题后缀为+，要过滤能用该通配符匹配的主题
      */
-    private fun filterByWildcard2(topic: String): MutableSet<Subscribe> {
+    private fun filterByWildcard2(topic: String): MutableSet<Topics> {
         val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<Subscribe>()
+        val result = mutableSetOf<Topics>()
 
-        val iterator = subscribeBodies.keys.iterator()
+        val iterator = topicsBodies.keys.iterator()
         val length = topic.length
         while (iterator.hasNext()) {
             val key = iterator.next()
             if (key.startsWith(target) && key.lastIndexOf("/") < length) {
-                result.add(subscribeBodies[key]!!)
-                fillerBodies[key] = subscribeBodies[key]!!
+                result.add(topicsBodies[key]!!)
+                fillerBodies[key] = topicsBodies[key]!!
                 iterator.remove()
-                subscribeBodies.remove(key)
+                topicsBodies.remove(key)
             }
         }
         fillerBodies[topic]?.also {
             result.remove(it)
-            subscribeBodies[topic] = it
+            topicsBodies[topic] = it
         }
         fillerBodies.remove(topic)
         return result
@@ -147,15 +147,15 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param body 单项订阅内容
      */
     internal fun unsubscribe(
-        body: Subscribe,
+        body: Topics,
         client: MqttWrapperClient
     ) {
-        var filter: MutableSet<Subscribe> = mutableSetOf()
+        var filter: MutableSet<Topics> = mutableSetOf()
 
-        subscribeBodies
+        topicsBodies
             .takeIf {
                 needUnsubscribe(body)
-                subscribeBodies.containsKey(body.convertKey())
+                topicsBodies.containsKey(body.convertKey())
             }?.remove(body.convertKey())
             ?.takeIf {
                 body.topic.endsWith("#") || body.topic.endsWith("+")
@@ -186,24 +186,24 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param bodies 订阅内容集合
      */
     internal fun unsubscribe(
-        bodies: List<Subscribe>,
+        bodies: List<Topics>,
         client: MqttWrapperClient
     ): List<String> {
 
         val topic = mutableListOf<String>()
         val qos = mutableListOf<Int>()
-        val filter: MutableSet<Subscribe> = mutableSetOf()
+        val filter: MutableSet<Topics> = mutableSetOf()
 
         bodies.forEach { body ->
-            subscribeBodies
+            topicsBodies
                 .takeIf {
                     needUnsubscribe(body)
-                    subscribeBodies.containsKey(body.convertKey())
+                    topicsBodies.containsKey(body.convertKey())
                 }?.also {
                     topic.add(body.topic)
                     qos.add(body.qos)
-                }.takeIf {
-                    body.attachRecord
+                }?.takeIf {
+                    body.headers.attachRecord
                 }?.remove(body.convertKey())
                 ?.takeIf {
                     body.topic.endsWith("#") || body.topic.endsWith("+")
@@ -234,16 +234,16 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 过滤通配符「#」
      * 当新增的主题后缀为#，要过滤能用该通配符匹配的主题
      */
-    private fun appendTopic1(topic: String): MutableSet<Subscribe> {
+    private fun appendTopic1(topic: String): MutableSet<Topics> {
         val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<Subscribe>()
+        val result = mutableSetOf<Topics>()
 
         val iterator = fillerBodies.keys.iterator()
         while (iterator.hasNext()) {
             val key = iterator.next()
             if (key.startsWith(target)) {
                 result.add(fillerBodies[key]!!)
-                subscribeBodies[key] = fillerBodies[key]!!
+                topicsBodies[key] = fillerBodies[key]!!
                 iterator.remove()
                 fillerBodies.remove(key)
             }
@@ -255,9 +255,9 @@ internal class WildcardFiller @JvmOverloads constructor(
      * 过滤通配符「+」
      * 当新增的主题后缀为+，要过滤能用该通配符匹配的主题
      */
-    private fun appendTopic2(topic: String): MutableSet<Subscribe> {
+    private fun appendTopic2(topic: String): MutableSet<Topics> {
         val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<Subscribe>()
+        val result = mutableSetOf<Topics>()
 
         val iterator = fillerBodies.keys.iterator()
         val length = topic.length
@@ -265,7 +265,7 @@ internal class WildcardFiller @JvmOverloads constructor(
             val key = iterator.next()
             if (key.startsWith(target) && key.lastIndexOf("/") < length) {
                 result.add(fillerBodies[key]!!)
-                subscribeBodies[key] = fillerBodies[key]!!
+                topicsBodies[key] = fillerBodies[key]!!
                 iterator.remove()
                 fillerBodies.remove(key)
             }
@@ -278,7 +278,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param body 订阅主题
      * @return true:需要订阅，false:无需订阅
      */
-    private fun needSubscribe(body: Subscribe): Boolean {
+    private fun needSubscribe(body: Topics): Boolean {
         if (!subscribeOptimize) return true
 
         var needAddSubscribe = true
@@ -295,7 +295,7 @@ internal class WildcardFiller @JvmOverloads constructor(
             }
 
             if (currentNote.child[it] == null) {
-                currentNote.child[it] = SubscribeNote(it)
+                currentNote.child[it] = TopicsNote(it)
             }
             currentNote = currentNote.child[it]!!
         }
@@ -312,7 +312,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      * @param body 订阅主题
      * @return true:需要取消订阅，false:无需取消订阅
      */
-    private fun needUnsubscribe(body: Subscribe) {
+    private fun needUnsubscribe(body: Topics) {
         if (!subscribeOptimize) return
 
         val array = body.topic.split("/")
@@ -320,30 +320,30 @@ internal class WildcardFiller @JvmOverloads constructor(
         removeLastNote(currentNote, array, 0)
     }
 
-    private fun removeLastNote(subscribeNote: SubscribeNote, array: List<String>, position: Int) {
+    private fun removeLastNote(topicsNote: TopicsNote, array: List<String>, position: Int) {
         if (position == array.size) {
             return
         }
         val noteName = array[position]
-        val nextNote = subscribeNote.child[noteName] ?: return
+        val nextNote = topicsNote.child[noteName] ?: return
         removeLastNote(nextNote, array, position + 1)
         if (position == array.size - 1 || (nextNote.child.isEmpty() && !nextNote.enable)) {
-            subscribeNote.child.remove(noteName)
+            topicsNote.child.remove(noteName)
         }
     }
 
     /**
      * 获取订阅主题内容集合
      */
-    internal fun getSubscribeBodyList(): List<Subscribe> {
-        return subscribeBodies.values.toMutableList()
+    internal fun getSubscribeBodyList(): List<Topics> {
+        return topicsBodies.values.toMutableList()
     }
 
     /**
      * 清空订阅
      */
     internal fun clear() {
-        subscribeBodies.clear()
+        topicsBodies.clear()
     }
 
 }

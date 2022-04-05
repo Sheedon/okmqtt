@@ -108,7 +108,7 @@ class Request internal constructor(
          * 响应所订阅的主题，默认消息质量为0
          */
         open fun backTopic(backTopic: String) = apply {
-            relation.subscribe(Topics(backTopic))
+            relation.topics(Topics(backTopic))
         }
 
         /**
@@ -121,21 +121,21 @@ class Request internal constructor(
         /**
          * 订阅主题信息
          */
-        open fun subscribe(topics: Topics) = apply {
-            relation.subscribe(topics)
+        open fun topics(topics: Topics) = apply {
+            relation.topics(topics)
         }
 
         /**
          * 订阅主题信息
          */
-        open fun subscribe(
+        open fun topics(
             backTopic: String,
             qos: Int = 0,
             attachRecord: Boolean = false,
             subscriptionType: SubscriptionType = SubscriptionType.REMOTE,
             userContext: Any? = null
         ) = apply {
-            relation.subscribe(
+            relation.topics(
                 Topics(
                     backTopic,
                     qos,
@@ -172,8 +172,6 @@ class Request internal constructor(
         }
 
         open fun build(): Request {
-            check(topic.isEmpty()) { "top == null" }
-
             if (body == null) {
                 body(RequestBody(topic, data, qos, retained, charset))
             }

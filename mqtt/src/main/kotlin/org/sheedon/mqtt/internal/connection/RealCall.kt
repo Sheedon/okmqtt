@@ -17,10 +17,10 @@ package org.sheedon.mqtt.internal.connection
 
 import org.sheedon.mqtt.*
 import org.sheedon.mqtt.internal.IDispatchManager
+import org.sheedon.mqtt.internal.concurrent.NamedRunnable
 import org.sheedon.mqtt.internal.connection.responsibility.PublishPlan
 import org.sheedon.mqtt.internal.connection.responsibility.SubscribePlan
 import org.sheedon.mqtt.internal.log
-import org.sheedon.rr.core.NamedRunnable
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -48,7 +48,9 @@ class RealCall(
         check(executed.compareAndSet(false, true))
 
         this.callback = callback
-        this.dispatcher.enqueueRequest(AsyncCall(callback))
+
+        val eventBehavior = this.dispatcher.eventBehavior()
+        eventBehavior.enqueueRequestEvent(AsyncCall(callback))
     }
 
     override fun publish() {
