@@ -31,28 +31,28 @@ class MqttClient {
     private fun createClient() {
 
         // 创建MqttClient
-        val clientId = "***" // 设置设备编号
-        val serverUri = "***" // 设置服务器地址
-        val subscribeBodies: MutableList<SubscribeBody> = ArrayList()
-        subscribeBodies.add(
-            SubscribeBody.build(
-                "***",
+        val clientId = "**" // 设置设备编号
+        val serverUri = "tcp://***" // 设置服务器地址
+        val topicsBodies: MutableList<Topics> = ArrayList()
+        topicsBodies.add(
+            Topics.build(
+                "yh_classify/clouds/garbage/cmd/LJTF2020072001",
                 1
             )
         ) // 添加需要订阅主题
-        subscribeBodies.add(
-            SubscribeBody.build(
-                "***",
+        topicsBodies.add(
+            Topics.build(
+                "yh_classify/clouds/recyclable/cmd/yhkhs20181029046",
                 1
             )
         ) // 添加需要订阅主题
-
 
         if (mClient == null) {
             mClient = OkMqttClient.Builder()
                 .clientInfo(App.instance, serverUri, clientId)
-                .subscribeBodies(subscribeBodies = subscribeBodies.toTypedArray())
-                .addBackTopicConverter(CallbackNameConverter(Gson()))
+                .subscribeBodies(topicsBodies = topicsBodies.toTypedArray())
+                .keywordConverter(CallbackNameConverter(Gson()))
+                .openLog(showMqttLog = true, openRRBindLog = true)
                 .build()
         }
     }

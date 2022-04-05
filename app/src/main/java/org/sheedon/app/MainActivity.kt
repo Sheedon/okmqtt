@@ -7,10 +7,7 @@ import android.view.View
 import org.json.JSONException
 import org.json.JSONObject
 import org.sheedon.app.factory.MqttClient
-import org.sheedon.mqtt.Callback
-import org.sheedon.mqtt.OkMqttClient
-import org.sheedon.mqtt.Request
-import org.sheedon.mqtt.Response
+import org.sheedon.mqtt.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,20 +19,22 @@ class MainActivity : AppCompatActivity() {
 
         val request: Request = Request.Builder()
             .backTopic("get_manager_list")
+            .topic("yh_classify/device/recyclable/data/yhkhs20181029046")
             .delaySecond(10)
             .build()
 
         val observable = client.newObservable(request)
-        observable.subscribe(object : Callback {
-            override fun onFailure(e: Throwable) {
+        observable.enqueue(object :Callback{
+            override fun onResponse(call: Call, response: Response) {
+                Log.v("TAG", "response:${response.body}")
+            }
+
+            override fun onFailure(e: Throwable?) {
                 Log.v("TAG", "e:$e")
             }
 
-            override fun onResponse(request: Request, response: Response) {
-                Log.v("TAG", "response:${response.body()}")
-            }
-
         })
+
     }
 
     fun onTouchClick(view: View) {
@@ -49,20 +48,29 @@ class MainActivity : AppCompatActivity() {
         }
 
         val request = Request.Builder()
-            .backTopic("***/get_manager_list")
+            .delaySecond(100)
+            .topic("yh_classify/device/recyclable/data/yhkhs20181029046")
+            .backTopic("yh_classify/clouds/recyclable/cmd/yhkhs20181029046")
+//            .keyword("get_manager_list")
             .data(jsonObject.toString())
             .build()
 
         val call = client.newCall(request)
         call.enqueue(object :Callback{
-            override fun onFailure(e: Throwable) {
-                Log.v("TAG", "e:$e")
+
+            override fun onResponse(call: Call, response: Response) {
+                Log.v("TAG", "response:${response.body}")
             }
 
-            override fun onResponse(request: Request, response: Response) {
-                Log.v("TAG", "response:${response.body()}")
+            override fun onFailure(e: Throwable?) {
+                Log.v("TAG", "e:$e")
             }
         })
+
+//        MqttClient.getInstance().getClient()?.subscribe(Topics.build(
+//            "yh_classify/clouds/recyclable/cmd/yhkhs20181029046",
+//            1
+//        ))
 
     }
 }

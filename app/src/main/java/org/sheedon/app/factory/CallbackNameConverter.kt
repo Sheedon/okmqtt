@@ -3,7 +3,7 @@ package org.sheedon.app.factory
 import com.google.gson.Gson
 import org.sheedon.app.RspModel
 import org.sheedon.mqtt.ResponseBody
-import org.sheedon.rr.core.DataConverter
+import org.sheedon.mqtt.internal.DataConverter
 import java.lang.Exception
 
 /**
