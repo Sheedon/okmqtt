@@ -16,7 +16,6 @@
 package org.sheedon.mqtt.utils
 
 import android.util.Log
-import org.sheedon.mqtt.template.ILogger
 import java.lang.StringBuilder
 
 /**

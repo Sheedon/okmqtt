@@ -26,6 +26,9 @@ class ObservableNote @JvmOverloads constructor(
     @Volatile
     var flag = AtomicInteger()
 
+    // 当前主题信息
+    var currentTopic: Topics? = null
+
     // 子节点集合
     val childNotes = ConcurrentHashMap<String, ObservableNote>()
 
@@ -65,8 +68,9 @@ class ObservableNote @JvmOverloads constructor(
     /**
      * 订阅递增 +1
      */
-    fun increment() {
+    fun increment(topics: Topics) {
         count.incrementAndGet()
+        currentTopic = topics
     }
 
     /**
@@ -74,6 +78,9 @@ class ObservableNote @JvmOverloads constructor(
      */
     fun decrement(): Int {
         val countNum = count.decrementAndGet()
+        if (countNum <= 0) {
+            currentTopic = null
+        }
         return if (countNum < 0) return 0 else countNum
     }
 
@@ -175,15 +182,17 @@ class ObservableNote @JvmOverloads constructor(
     fun disablePoundSign(
         parent: ObservableNote?,
         pathName: StringBuilder,
-        removeArray: MutableSet<String>
+        removeArray: MutableSet<Topics>
     ) {
-        val currentPathName = pathName.toString()
         parent?.childNotes?.forEach { entry ->
             entry.takeIf { it.key != "#" }
                 ?.also {
                     val value = it.value
                     if (value.status == NoteStatus.ENABLE) {
-                        removeArray.add(currentPathName + value.name)
+                        val currentTopic = value.currentTopic
+                        if (currentTopic != null) {
+                            removeArray.add(currentTopic)
+                        }
                         value.status = NoteStatus.DISABLE
                     }
                     val current = StringBuilder(pathName).append(value.name).append(REGEX)
@@ -198,14 +207,16 @@ class ObservableNote @JvmOverloads constructor(
     fun disableNextPoundSign(
         parent: ObservableNote?,
         pathName: StringBuilder,
-        removeArray: MutableSet<String>
+        removeArray: MutableSet<Topics>
     ) {
-        val currentPathName = pathName.toString()
         parent?.childNotes?.forEach {
             val value = it.value
             if (value.status == NoteStatus.ENABLE) {
                 value.status = NoteStatus.DISABLE
-                removeArray.add(currentPathName + value.name)
+                val currentTopic = value.currentTopic
+                if (currentTopic != null) {
+                    removeArray.add(currentTopic)
+                }
             }
             val current = StringBuilder(pathName).append(value.name).append(REGEX)
             disableNextPoundSign(value, current, removeArray)
@@ -218,16 +229,17 @@ class ObservableNote @JvmOverloads constructor(
     @Synchronized
     fun disablePlusSign(
         parent: ObservableNote?,
-        pathName: StringBuilder,
-        removeArray: MutableSet<String>
+        removeArray: MutableSet<Topics>
     ) {
-        val currentPathName = pathName.toString()
         parent?.childNotes?.forEach { entry ->
             entry.takeIf { it.key != "+" }
                 ?.also {
                     val value = it.value
                     if (value.status == NoteStatus.ENABLE) {
-                        removeArray.add(currentPathName + value.name)
+                        val currentTopic = value.currentTopic
+                        if (currentTopic != null) {
+                            removeArray.add(currentTopic)
+                        }
                         value.status = NoteStatus.DISABLE
                     }
                 }
@@ -301,19 +313,21 @@ class ObservableNote @JvmOverloads constructor(
     fun enablePoundSign(
         parent: ObservableNote?,
         pathName: StringBuilder,
-        addArray: MutableSet<String>
+        addArray: MutableSet<Topics>
     ) {
         parent?.childNotes?.also { childNotes ->
             // 不存在「+」，启动同级和下级
             if (childNotes["+"] == null) {
-                val currentPathName = pathName.toString()
                 childNotes.values.forEach {
                     if (it.name == "#") {
                         return@forEach
                     }
                     if (it.isDisable()) {
                         it.status = NoteStatus.ENABLE
-                        addArray.add(currentPathName + it.name)
+                        val currentTopic = it.currentTopic
+                        if (currentTopic != null) {
+                            addArray.add(currentTopic)
+                        }
                     }
                     val current = StringBuilder(pathName).append(it.name).append(REGEX)
                     enableNextPoundSign(it, current, addArray)
@@ -340,14 +354,15 @@ class ObservableNote @JvmOverloads constructor(
     @Synchronized
     fun enablePlusSign(
         parent: ObservableNote?,
-        pathName: StringBuilder,
-        addArray: MutableSet<String>
+        addArray: MutableSet<Topics>
     ) {
-        val currentPathName = pathName.toString()
         parent?.childNotes?.forEach {
             if (it.key != "+" && it.value.isDisable()) {
                 it.value.status = NoteStatus.ENABLE
-                addArray.add(currentPathName + it.key)
+                val currentTopic = it.value.currentTopic
+                if (currentTopic != null) {
+                    addArray.add(currentTopic)
+                }
             }
         }
     }
@@ -360,20 +375,28 @@ class ObservableNote @JvmOverloads constructor(
     fun enableNextPoundSign(
         parent: ObservableNote,
         pathName: StringBuilder,
-        addArray: MutableSet<String>
+        addArray: MutableSet<Topics>
     ) {
         val child = parent.childNotes
         // # 启动
-        if (child["#"] != null) {
-            child["#"]?.status = NoteStatus.ENABLE
-            addArray.add("$pathName#")
+        var note = child["#"]
+        if (note != null) {
+            note.status = NoteStatus.ENABLE
+            val topic = note.currentTopic
+            if (topic != null) {
+                addArray.add(topic)
+            }
             return
         }
 
         // + 启动
-        if (child["+"] != null) {
-            child["+"]!!.status = NoteStatus.ENABLE
-            addArray.add("$pathName+")
+        note = child["+"]
+        if (note != null) {
+            note.status = NoteStatus.ENABLE
+            val topic = note.currentTopic
+            if (topic != null) {
+                addArray.add(topic)
+            }
             child.forEach {
                 if (it.key != "+") {
                     val current = StringBuilder(pathName).append(it.value.name).append(REGEX)
@@ -384,10 +407,12 @@ class ObservableNote @JvmOverloads constructor(
         }
 
         // 其他启动
-        val currentPathName = pathName.toString()
         child.forEach {
             if (it.value.status == NoteStatus.DISABLE) {
-                addArray.add(currentPathName + it.value.name)
+                val topic = it.value.currentTopic
+                if (topic != null) {
+                    addArray.add(topic)
+                }
                 it.value.status = 1
             }
             val current = StringBuilder(pathName).append(it.value.name).append(REGEX)

@@ -15,8 +15,6 @@
  */
 package org.sheedon.mqtt.utils
 
-import org.sheedon.mqtt.template.ILogger
-
 /**
  * Logger wrapper class
  *

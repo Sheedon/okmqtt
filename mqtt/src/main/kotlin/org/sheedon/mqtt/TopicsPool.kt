@@ -19,9 +19,9 @@ class TopicsPool {
     val systemRootNote: ObservableNote = ObservableNote(ROOT_NAME)
 
     // 优先存在#，都存在按/个数由少到多排序，否则根据存在+，按/个数由少到多排序
-    val sortCondition = Comparator<String> { condition1, condition2 ->
-        val o1End = condition1.endsWith("#")
-        val o2End = condition2.endsWith("#")
+    val sortCondition = Comparator<Topics> { condition1, condition2 ->
+        val o1End = condition1.topic.endsWith("#")
+        val o2End = condition2.topic.endsWith("#")
         compareProcess(
             o1End, o2End,
             compareCount(condition1, condition2),
@@ -31,15 +31,15 @@ class TopicsPool {
 
     /**
      * 添加一个订阅路径
-     * @param paths 需要订阅的路径集合
+     * @param bodies 需要订阅的路径集合
      * @return 包含实际需要订阅的路径集合，和取消订阅的路径集合
      */
-    fun push(paths: List<String>): Pair<Set<String>, Set<String>> {
-        val addArray = mutableSetOf<String>()
-        val removeArray = mutableSetOf<String>()
-        val targetList = paths.sortedWith(sortCondition)
+    fun push(bodies: List<Topics>): Pair<Set<Topics>, Set<Topics>> {
+        val addArray = mutableSetOf<Topics>()
+        val removeArray = mutableSetOf<Topics>()
+        val targetList = bodies.sortedWith(sortCondition)
         targetList.forEach { path ->
-            if (path.isEmpty()) {
+            if (path.topic.isEmpty()) {
                 return@forEach
             }
             push(path).also { pair ->
@@ -60,8 +60,9 @@ class TopicsPool {
      * @param path 需要订阅的路径
      * @return 包含实际需要订阅的路径，和取消订阅的路径集合
      */
-    fun push(path: String): Pair<String?, Set<String>> {
-        val removeArray = mutableSetOf<String>()
+    fun push(topics: Topics): Pair<Topics?, Set<Topics>> {
+        val removeArray = mutableSetOf<Topics>()
+        val path = topics.topic
 
         // 若路径为空，则直接返回
         if (path.isEmpty()) {
@@ -102,7 +103,7 @@ class TopicsPool {
         }
 
         // 订阅当前主题的个数+1
-        currentNote.increment()
+        currentNote.increment(topics)
         // 当前为通配符，且不是空状态，空状态代表新增，则说明这个通配符之前已经配置，无需在此配置
         if (currentNote.checkWildcardAndNotEmpty()) {
             recoverFlag(parentArray)
@@ -120,7 +121,6 @@ class TopicsPool {
         if (pathName.isNotEmpty()) {
             pathName.deleteCharAt(pathName.length - 1)
         }
-        val addPath = pathName.toString()
         val parent = currentNote.parent
 
         if (currentNote.isPoundSign()) {
@@ -130,10 +130,10 @@ class TopicsPool {
         } else if (currentNote.isPlusSign()) {
             // 当前新增项为+，则需要移除+所能通配的层级资源，从而添加到removeArray中
             pathName.deleteCharAt(pathName.length - 1)
-            currentNote.disablePlusSign(parent, pathName, removeArray)
+            currentNote.disablePlusSign(parent, removeArray)
         }
         recoverFlag(parentArray)
-        return Pair(addPath, removeArray)
+        return Pair(topics, removeArray)
     }
 
     /**
@@ -151,15 +151,15 @@ class TopicsPool {
      * @param paths 需要取消订阅的路径集合
      * @return 包含实际需要订阅的路径集合，和取消订阅的路径集合
      */
-    fun pop(paths: List<String>): Pair<Set<String>, Set<String>> {
-        val addArray = mutableSetOf<String>()
-        val removeArray = mutableSetOf<String>()
+    fun pop(paths: List<Topics>): Pair<Set<Topics>, Set<Topics>> {
+        val addArray = mutableSetOf<Topics>()
+        val removeArray = mutableSetOf<Topics>()
         val targetList = paths.sortedWith(sortCondition)
         // 排序翻转
         targetList.reversed()
 
         targetList.forEach { path ->
-            if (path.isEmpty()) {
+            if (path.topic.isEmpty()) {
                 return@forEach
             }
             pop(path).also { pair ->
@@ -180,18 +180,18 @@ class TopicsPool {
      * @param path 需要取消订阅的路径
      * @return 包含实际需要订阅的路径，和取消订阅的路径集合
      */
-    fun pop(path: String): Pair<Set<String>, String?> {
-        val addArray = mutableSetOf<String>()
+    fun pop(path: Topics): Pair<Set<Topics>, Topics?> {
+        val addArray = mutableSetOf<Topics>()
 
         // 若路径为空，则直接返回
-        if (path.isEmpty()) {
+        if (path.topic.isEmpty()) {
             return Pair(addArray, null)
         }
 
         // 按/分割字符串
-        val noteArray = path.split(REGEX)
+        val noteArray = path.topic.split(REGEX)
         // 当前路径
-        var currentNote = loadRootNote(path)
+        var currentNote = loadRootNote(path.topic)
         // 完整路径名
         val pathName = StringBuilder()
 
@@ -232,7 +232,6 @@ class TopicsPool {
             pathName.deleteCharAt(pathName.length - 1)
         }
 
-        val removePath = pathName.toString()
         val parent = currentNote.parent
 
         // 启动状态下，需要取消这个节点
@@ -244,12 +243,12 @@ class TopicsPool {
         } else if (currentNote.isPlusSign()) {
             // 当前删除项为+，则需要恢复+所能通配的层级资源，从而添加到addArray中
             pathName.deleteCharAt(pathName.length - 1)
-            currentNote.enablePlusSign(parent, pathName, addArray)
+            currentNote.enablePlusSign(parent, addArray)
         }
 
         // 尝试删除当前节点，并且返回添加集合和移除的路径
         currentNote.tryDeleteSelf()
-        return Pair(addArray, removePath)
+        return Pair(addArray, path)
     }
 
     /**
@@ -266,9 +265,9 @@ class TopicsPool {
     /**
      * 比较+号
      */
-    private fun sortPlusSign(str1: String, str2: String): () -> Int {
-        val o1End = str1.endsWith("+")
-        val o2End = str2.endsWith("+")
+    private fun sortPlusSign(str1: Topics, str2: Topics): () -> Int {
+        val o1End = str1.topic.endsWith("+")
+        val o2End = str2.topic.endsWith("+")
 
         return {
             compareProcess(
@@ -307,11 +306,11 @@ class TopicsPool {
     /**
      * 比较个数
      */
-    private fun compareCount(str1: String, str2: String): () -> Int {
+    private fun compareCount(str1: Topics, str2: Topics): () -> Int {
         return {
-            str1.count {
+            str1.topic.count {
                 it == '/'
-            } - str2.count {
+            } - str2.topic.count {
                 it == '/'
             }
         }

@@ -26,7 +26,7 @@ import org.sheedon.mqtt.internal.binder.MqttRequestHandler
 import org.sheedon.mqtt.internal.concurrent.EventBehavior
 import org.sheedon.mqtt.internal.log
 import org.sheedon.mqtt.listener.*
-import org.sheedon.mqtt.template.ILogger
+import org.sheedon.mqtt.utils.ILogger
 import org.sheedon.mqtt.utils.Logger
 import org.sheedon.rr.timeout.TimeoutManager
 

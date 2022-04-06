@@ -9,38 +9,40 @@ package org.sheedon.mqtt
  * @Date: 2022/2/25 5:58 下午
  */
 internal class WildcardFiller @JvmOverloads constructor(
-    var topicsBodies: MutableMap<String, Topics> = mutableMapOf(),
-    val subscribeOptimize: Boolean = false
+    _topicsBodies: List<Topics> = mutableListOf()
 ) {
 
-    private val fillerBodies: MutableMap<String, Topics> = mutableMapOf()
-    private val rootNote = TopicsNote("root")
+    // 主题消息池
+    private val topicsPool = TopicsPool()
+
+    // 订阅的主题集合
+    var topicsBodies: MutableSet<Topics> = mutableSetOf()
+
+    init {
+        val pop = topicsPool.pop(_topicsBodies)
+        topicsBodies.addAll(pop.first)
+    }
 
     /**
      * 订阅主题
      *
      * @param body 单项订阅内容
      */
-    internal fun subscribe(body: Topics, client: MqttWrapperClient) {
-        topicsBodies
-            .takeUnless {
-                topicsBodies.containsKey(body.convertKey()) || !needSubscribe(body)
-            }?.let {
-                it[body.convertKey()] = body
-            }?.also {
-                var filter: Set<Topics> = emptySet()
-                body.topic.also {
-                    if (it.endsWith("#")) {
-                        filter = filterByWildcard1(it)
+    internal fun subscribe(
+        body: Topics,
+        client: MqttWrapperClient
+    ): Topics? {
+        val (addTopics, removeTopics) = topicsPool.push(body)
 
-                    } else if (it.endsWith("+")) {
-                        filter = filterByWildcard2(it)
-                    }
-                }
-                if (filter.isNotEmpty()) {
-                    client.unsubscribe(filter.toList())
-                }
-            }
+        // 需要订阅的主题不为空，则添加订阅
+        if (addTopics != null) {
+            topicsBodies.add(addTopics)
+        }
+
+        // 取消订阅的主题不为空，则取消订阅
+        unsubscribeTopic(removeTopics, client)
+
+        return addTopics
     }
 
     /**
@@ -51,93 +53,45 @@ internal class WildcardFiller @JvmOverloads constructor(
     internal fun subscribe(
         bodies: List<Topics>,
         client: MqttWrapperClient
-    ): Pair<List<String>, List<Int>> {
+    ): Pair<Collection<String>, Collection<Int>> {
 
+        val (addTopics, removeTopics) = topicsPool.push(bodies)
+
+        // 订阅信息
         val topic = mutableListOf<String>()
         val qos = mutableListOf<Int>()
-        val filter: MutableSet<Topics> = mutableSetOf()
-
-        bodies.forEach { body ->
-            topicsBodies.takeIf {
-                !topicsBodies.containsKey(body.convertKey()) && needSubscribe(body)
-            }?.also {
-                topic.add(body.topic)
-                qos.add(body.qos)
-            }?.takeIf {
-                body.headers.attachRecord
-            }?.let {
-                it[body.convertKey()] = body
-                body
-            }?.also {
-                // TODO 存在隐患，主题级别
-                body.topic.also {
-                    if (it.endsWith("#")) {
-                        filter.addAll(filterByWildcard1(it))
-                    } else if (it.endsWith("+")) {
-                        filter.addAll(filterByWildcard2(it))
-                    }
-                }
+        addTopics.forEach {
+            if (it.headers.attachRecord) {
+                topicsBodies.add(it)
             }
+            topic.add(it.topic)
+            qos.add(it.qos)
         }
 
-        if (filter.isNotEmpty()) {
-            client.unsubscribe(filter.toList())
-        }
+        // 取消订阅的主题不为空，则取消订阅
+        unsubscribeTopic(removeTopics, client)
 
         return Pair(topic, qos)
     }
 
     /**
-     * 过滤通配符「#」
-     * 当新增的主题后缀为#，要过滤能用该通配符匹配的主题
+     * 取消订阅主题
      */
-    private fun filterByWildcard1(topic: String): MutableSet<Topics> {
-        val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<Topics>()
-
-        val iterator = topicsBodies.keys.iterator()
-        while (iterator.hasNext()) {
-            val key = iterator.next()
-            if (key.startsWith(target)) {
-                result.add(topicsBodies[key]!!)
-                fillerBodies[key] = topicsBodies[key]!!
-                iterator.remove()
-                topicsBodies.remove(key)
+    private fun unsubscribeTopic(
+        topic: Set<Topics>,
+        client: MqttWrapperClient
+    ) {
+        // 取消订阅的主题不为空，则取消订阅
+        topic.map {
+            if (it.headers.attachRecord) {
+                topicsBodies.remove(it)
             }
+            it.topic
+        }.takeIf {
+            it.isNotEmpty()
+        }?.run {
+            client.unsubscribeRealTopic(this)
         }
-        fillerBodies[topic]?.also {
-            result.remove(it)
-            topicsBodies[topic] = it
-        }
-        fillerBodies.remove(topic)
-        return result
-    }
-
-    /**
-     * 过滤通配符「+」
-     * 当新增的主题后缀为+，要过滤能用该通配符匹配的主题
-     */
-    private fun filterByWildcard2(topic: String): MutableSet<Topics> {
-        val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<Topics>()
-
-        val iterator = topicsBodies.keys.iterator()
-        val length = topic.length
-        while (iterator.hasNext()) {
-            val key = iterator.next()
-            if (key.startsWith(target) && key.lastIndexOf("/") < length) {
-                result.add(topicsBodies[key]!!)
-                fillerBodies[key] = topicsBodies[key]!!
-                iterator.remove()
-                topicsBodies.remove(key)
-            }
-        }
-        fillerBodies[topic]?.also {
-            result.remove(it)
-            topicsBodies[topic] = it
-        }
-        fillerBodies.remove(topic)
-        return result
     }
 
 
@@ -149,35 +103,18 @@ internal class WildcardFiller @JvmOverloads constructor(
     internal fun unsubscribe(
         body: Topics,
         client: MqttWrapperClient
-    ) {
-        var filter: MutableSet<Topics> = mutableSetOf()
+    ): Topics? {
 
-        topicsBodies
-            .takeIf {
-                needUnsubscribe(body)
-                topicsBodies.containsKey(body.convertKey())
-            }?.remove(body.convertKey())
-            ?.takeIf {
-                body.topic.endsWith("#") || body.topic.endsWith("+")
-            }?.run {
-                val topic = body.topic
-                when {
-                    topic.endsWith("#") -> {
-                        filter = appendTopic1(topic)
-                    }
-                    topic.endsWith("+") -> {
-                        filter = appendTopic2(topic)
-                    }
-                    else -> {
-
-                    }
-                }
-            }
-
-
-        if (filter.isNotEmpty()) {
-            client.subscribe(filter.toList())
+        val (addTopics, removeTopics) = topicsPool.pop(body)
+        // 需要取消订阅的主题不为空，则移除订阅
+        if (removeTopics != null) {
+            topicsBodies.remove(removeTopics)
         }
+
+        // 订阅的主题不为空，则添加订阅
+        subscribeTopic(addTopics, client)
+
+        return removeTopics
     }
 
     /**
@@ -188,155 +125,46 @@ internal class WildcardFiller @JvmOverloads constructor(
     internal fun unsubscribe(
         bodies: List<Topics>,
         client: MqttWrapperClient
-    ): List<String> {
+    ): Collection<String> {
 
+        val (addTopics, removeTopics) = topicsPool.pop(bodies)
+
+        // 取消订阅信息
         val topic = mutableListOf<String>()
-        val qos = mutableListOf<Int>()
-        val filter: MutableSet<Topics> = mutableSetOf()
-
-        bodies.forEach { body ->
-            topicsBodies
-                .takeIf {
-                    needUnsubscribe(body)
-                    topicsBodies.containsKey(body.convertKey())
-                }?.also {
-                    topic.add(body.topic)
-                    qos.add(body.qos)
-                }?.takeIf {
-                    body.headers.attachRecord
-                }?.remove(body.convertKey())
-                ?.takeIf {
-                    body.topic.endsWith("#") || body.topic.endsWith("+")
-                }?.run {
-                    val topic = body.topic
-                    when {
-                        topic.endsWith("#") -> {
-                            filter.addAll(appendTopic1(topic))
-                        }
-                        topic.endsWith("+") -> {
-                            filter.addAll(appendTopic2(topic))
-                        }
-                        else -> {
-
-                        }
-                    }
-                }
+        removeTopics.forEach {
+            if (it.headers.attachRecord) {
+                topicsBodies.add(it)
+            }
+            topic.add(it.topic)
         }
 
-        if (filter.isNotEmpty()) {
-            client.subscribe(filter.toList())
-        }
+        // 订阅的主题不为空，则添加订阅
+        subscribeTopic(addTopics, client)
 
         return topic
     }
 
     /**
-     * 过滤通配符「#」
-     * 当新增的主题后缀为#，要过滤能用该通配符匹配的主题
+     * 添加订阅主题
      */
-    private fun appendTopic1(topic: String): MutableSet<Topics> {
-        val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<Topics>()
+    private fun subscribeTopic(
+        topic: Set<Topics>,
+        client: MqttWrapperClient
+    ) {
+        if (topic.isEmpty()) return
 
-        val iterator = fillerBodies.keys.iterator()
-        while (iterator.hasNext()) {
-            val key = iterator.next()
-            if (key.startsWith(target)) {
-                result.add(fillerBodies[key]!!)
-                topicsBodies[key] = fillerBodies[key]!!
-                iterator.remove()
-                fillerBodies.remove(key)
+        // 订阅的主题不为空，则添加订阅
+        val topicArray = ArrayList<String>()
+        val qosArray = ArrayList<Int>()
+        topic.forEach {
+            if (it.headers.attachRecord) {
+                topicsBodies.add(it)
             }
+            topicArray.add(it.topic)
+            qosArray.add(it.qos)
         }
-        return result
-    }
 
-    /**
-     * 过滤通配符「+」
-     * 当新增的主题后缀为+，要过滤能用该通配符匹配的主题
-     */
-    private fun appendTopic2(topic: String): MutableSet<Topics> {
-        val target = topic.take(topic.length - 1)
-        val result = mutableSetOf<Topics>()
-
-        val iterator = fillerBodies.keys.iterator()
-        val length = topic.length
-        while (iterator.hasNext()) {
-            val key = iterator.next()
-            if (key.startsWith(target) && key.lastIndexOf("/") < length) {
-                result.add(fillerBodies[key]!!)
-                topicsBodies[key] = fillerBodies[key]!!
-                iterator.remove()
-                fillerBodies.remove(key)
-            }
-        }
-        return result
-    }
-
-    /**
-     * 是否需要订阅新主题
-     * @param body 订阅主题
-     * @return true:需要订阅，false:无需订阅
-     */
-    private fun needSubscribe(body: Topics): Boolean {
-        if (!subscribeOptimize) return true
-
-        var needAddSubscribe = true
-        var currentNote = rootNote
-        var hierarchy = -1
-
-        body.topic.split("/").forEach {
-            if (needAddSubscribe) {
-                when {
-                    currentNote.child["#"] != null -> needAddSubscribe = false
-                    currentNote.child["+"] != null -> hierarchy = 0
-                    else -> hierarchy--
-                }
-            }
-
-            if (currentNote.child[it] == null) {
-                currentNote.child[it] = TopicsNote(it)
-            }
-            currentNote = currentNote.child[it]!!
-        }
-        currentNote.enable = true
-
-        if (hierarchy == 0) {
-            return false
-        }
-        return needAddSubscribe
-    }
-
-    /**
-     * 是否需要取消订阅新主题
-     * @param body 订阅主题
-     * @return true:需要取消订阅，false:无需取消订阅
-     */
-    private fun needUnsubscribe(body: Topics) {
-        if (!subscribeOptimize) return
-
-        val array = body.topic.split("/")
-        val currentNote = rootNote
-        removeLastNote(currentNote, array, 0)
-    }
-
-    private fun removeLastNote(topicsNote: TopicsNote, array: List<String>, position: Int) {
-        if (position == array.size) {
-            return
-        }
-        val noteName = array[position]
-        val nextNote = topicsNote.child[noteName] ?: return
-        removeLastNote(nextNote, array, position + 1)
-        if (position == array.size - 1 || (nextNote.child.isEmpty() && !nextNote.enable)) {
-            topicsNote.child.remove(noteName)
-        }
-    }
-
-    /**
-     * 获取订阅主题内容集合
-     */
-    internal fun getSubscribeBodyList(): List<Topics> {
-        return topicsBodies.values.toMutableList()
+        client.subscribeRealTopic(topicArray, qosArray)
     }
 
     /**

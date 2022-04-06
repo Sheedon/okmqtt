@@ -27,6 +27,7 @@ import org.sheedon.mqtt.listener.*
 import org.sheedon.mqtt.utils.Logger
 import java.lang.Exception
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * Real mqtt wrapper scheduling client
@@ -60,7 +61,7 @@ class MqttWrapperClient private constructor(
 
     // 主题通配符过滤器
     private val wildcardFiller: WildcardFiller = WildcardFiller(
-        builder.subscribeBodies, builder.subscribeOptimize
+        builder.subscribeBodies
     )
 
     // 订阅情况监听器
@@ -69,9 +70,6 @@ class MqttWrapperClient private constructor(
 
     // 响应结果处理者
     internal var responseHandler: IResponseHandler = _responseHandler
-
-    // 自动注册主题
-    internal val autoRegister = builder.autoRegister
 
     // 上一次重连时间
     private var lastConnectTime: Long = 0
@@ -182,7 +180,7 @@ class MqttWrapperClient private constructor(
             val topic = mutableListOf<String>()
             val qos = mutableListOf<Int>()
 
-            subscribeBodies.forEach { (_, value) ->
+            subscribeBodies.forEach { value ->
                 topic.add(value.topic)
                 qos.add(value.qos)
             }
@@ -336,24 +334,27 @@ class MqttWrapperClient private constructor(
         listener: IMqttActionListener? = null
     ) {
         // 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
+        var subscribe: Topics? = null
         if (body.headers.attachRecord) {
-            wildcardFiller.subscribe(body, this)
+            subscribe = wildcardFiller.subscribe(body, this)
         }
-        mqttClient.subscribe(body.topic, body.qos, null, object : IMqttActionListener {
 
-            override fun onSuccess(asyncActionToken: IMqttToken?) {
-                listener?.onSuccess(asyncActionToken)
-                Logger.info("subscribe onSuccess")
-                subscribeListener?.onSuccess(IActionListener.ACTION.SUBSCRIBE)
-            }
+        subscribe?.let {
+            subscribeRealTopic(it, listener)
+        }
+    }
 
-            override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                listener?.onFailure(asyncActionToken, exception)
-                Logger.error("subscribe onFailure", exception)
-                subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
-            }
-
-        })
+    /**
+     * 真实的订阅方法
+     *
+     * @param body mqtt消息体
+     * @param listener 操作监听器
+     */
+    internal fun subscribeRealTopic(
+        body: Topics,
+        listener: IMqttActionListener? = null
+    ) {
+        mqttClient.subscribe(body.topic, body.qos, null, SubscribeListener(listener))
     }
 
     /**
@@ -375,25 +376,46 @@ class MqttWrapperClient private constructor(
             return
         }
 
+        // 执行真实的订阅一个主题集合
+        subscribeRealTopic(topic, qos, listener)
+    }
+
+    /**
+     * 真实的订阅方法
+     *
+     * @param body mqtt消息体
+     * @param listener 操作监听器
+     */
+    internal fun subscribeRealTopic(
+        topicArray: Collection<String>,
+        qosArray: Collection<Int>,
+        listener: IMqttActionListener? = null
+    ) {
         mqttClient.subscribe(
-            topic.toTypedArray(),
-            qos.toIntArray(),
+            topicArray.toTypedArray(),
+            qosArray.toIntArray(),
             null,
-            object : IMqttActionListener {
+            SubscribeListener(listener)
+        )
+    }
 
-                override fun onSuccess(asyncActionToken: IMqttToken?) {
-                    listener?.onSuccess(asyncActionToken)
-                    Logger.info("subscribe onSuccess")
-                    subscribeListener?.onSuccess(IActionListener.ACTION.SUBSCRIBE)
-                }
+    /**
+     * 订阅监听者实现类
+     */
+    private inner class SubscribeListener(val listener: IMqttActionListener? = null) :
+        IMqttActionListener {
 
-                override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                    listener?.onFailure(asyncActionToken, exception)
-                    Logger.error("subscribe onFailure", exception)
-                    subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
-                }
+        override fun onSuccess(asyncActionToken: IMqttToken?) {
+            listener?.onSuccess(asyncActionToken)
+            Logger.info("subscribe onSuccess")
+            subscribeListener?.onSuccess(IActionListener.ACTION.SUBSCRIBE)
+        }
 
-            })
+        override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+            listener?.onFailure(asyncActionToken, exception)
+            Logger.error("subscribe onFailure", exception)
+            subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
+        }
     }
 
     /**
@@ -406,25 +428,30 @@ class MqttWrapperClient private constructor(
         body: Topics,
         listener: IMqttActionListener? = null
     ) {
+
+        // 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
+        var unsubscribe: Topics? = null
         if (body.headers.attachRecord) {
             //是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
-            wildcardFiller.unsubscribe(body, this)
+            unsubscribe = wildcardFiller.unsubscribe(body, this)
         }
-        mqttClient.unsubscribe(body.topic, null, object : IMqttActionListener {
 
-            override fun onSuccess(asyncActionToken: IMqttToken?) {
-                listener?.onSuccess(asyncActionToken)
-                Logger.info("unsubscribe onSuccess")
-                subscribeListener?.onSuccess(IActionListener.ACTION.UNSUBSCRIBE)
-            }
+        unsubscribe?.let {
+            unsubscribeRealTopic(it, listener)
+        }
+    }
 
-            override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                listener?.onFailure(asyncActionToken, exception)
-                Logger.error("unsubscribe onFailure", exception)
-                subscribeListener?.onFailure(IActionListener.ACTION.UNSUBSCRIBE, exception)
-            }
-
-        })
+    /**
+     * 真实的取消订阅方法
+     *
+     * @param body mqtt消息体
+     * @param listener 操作监听器
+     */
+    internal fun unsubscribeRealTopic(
+        body: Topics,
+        listener: IMqttActionListener? = null
+    ) {
+        mqttClient.unsubscribe(body.topic, null, UnSubscribeListener(listener))
     }
 
     /**
@@ -437,31 +464,47 @@ class MqttWrapperClient private constructor(
         bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
-        val topic = wildcardFiller.unsubscribe(bodies, this)
-        if (topic.isEmpty()) {
+        val topics = wildcardFiller.unsubscribe(bodies, this)
+        if (topics.isEmpty()) {
             Logger.info("not topic need unsubscribe!")
             listener?.onSuccess(null)
             return
         }
 
-        mqttClient.unsubscribe(
-            topic.toTypedArray(),
-            null,
-            object : IMqttActionListener {
+        // 执行真实的订阅一个主题集合
+        unsubscribeRealTopic(topics, listener)
+    }
 
-                override fun onSuccess(asyncActionToken: IMqttToken?) {
-                    listener?.onSuccess(asyncActionToken)
-                    Logger.info("unsubscribe onSuccess")
-                    subscribeListener?.onSuccess(IActionListener.ACTION.UNSUBSCRIBE)
-                }
+    /**
+     * 真实的取消订阅方法
+     *
+     * @param body mqtt消息体
+     * @param listener 操作监听器
+     */
+    internal fun unsubscribeRealTopic(
+        topics: Collection<String>,
+        listener: IMqttActionListener? = null
+    ) {
+        mqttClient.unsubscribe(topics.toTypedArray(), null, UnSubscribeListener(listener))
+    }
 
-                override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                    listener?.onFailure(asyncActionToken, exception)
-                    Logger.error("unsubscribe onFailure", exception)
-                    subscribeListener?.onFailure(IActionListener.ACTION.UNSUBSCRIBE, exception)
-                }
+    /**
+     * 订阅监听者实现类
+     */
+    internal inner class UnSubscribeListener(val listener: IMqttActionListener? = null) :
+        IMqttActionListener {
 
-            })
+        override fun onSuccess(asyncActionToken: IMqttToken?) {
+            listener?.onSuccess(asyncActionToken)
+            Logger.info("unsubscribe onSuccess")
+            subscribeListener?.onSuccess(IActionListener.ACTION.UNSUBSCRIBE)
+        }
+
+        override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+            listener?.onFailure(asyncActionToken, exception)
+            Logger.error("unsubscribe onFailure", exception)
+            subscribeListener?.onFailure(IActionListener.ACTION.UNSUBSCRIBE, exception)
+        }
     }
 
     /**
@@ -507,7 +550,7 @@ class MqttWrapperClient private constructor(
         listener: IMqttActionListener? = null
     ) {
 
-        val copyBodies = wildcardFiller.getSubscribeBodyList()
+        val copyBodies = ArrayList(wildcardFiller.topicsBodies)
         wildcardFiller.clear()
         subscribe(bodies, object : IMqttActionListener {
             override fun onSuccess(asyncActionToken: IMqttToken?) {
@@ -570,20 +613,14 @@ class MqttWrapperClient private constructor(
         internal var connectListener: IActionListener? = null
 
         // 订阅信息
-        internal var subscribeBodies = mutableMapOf<String, Topics>()
+        internal var subscribeBodies = mutableListOf<Topics>()
 
         // 订阅情况监听器
         internal var subscribeListener: IActionListener? = null
 
-        // 是否启动订阅优化
-        internal var subscribeOptimize: Boolean = false
-
-        // 在重新连接后，是否自动订阅
-        internal var autoSubscribe: Boolean = false
-
-        // 自动注册需要订阅主题,请求或订阅消息，若该消息不在订阅集合中，则自动添加订阅
-        // 注意：backTopic 必须是完整订阅的主题，并且不能是消息体「请求类型」的一部分
-        internal var autoRegister: Boolean = false
+        // 在重新连接后，是否自动订阅,MqttConnectOptions isCleanSession == true and autoSubscribe == true,
+        // 才支持自动订阅
+        internal var autoSubscribe: Boolean = true
 
         init {
             connectOptions = DefaultMqttConnectOptions.default
@@ -687,38 +724,13 @@ class MqttWrapperClient private constructor(
         @JvmOverloads
         fun subscribeBodies(
             subscribeListener: IActionListener? = null,
-            autoSubscribe: Boolean = false,
+            autoSubscribe: Boolean = true,
             vararg topicsBodies: Topics
         ) = apply {
             this.subscribeBodies.clear()
-            topicsBodies.forEach {
-                this.subscribeBodies[it.convertKey()] = it
-            }
+            this.subscribeBodies.addAll(topicsBodies)
             this.subscribeListener = subscribeListener
             this.autoSubscribe = autoSubscribe
-        }
-
-        /**
-         * Whether to activate subscription optimization.
-         * After subscription optimization is activated,
-         * inclusive subscriptions will no longer be repeated subscriptions
-         * For example：A/B/C/# and A/B/C/+ and A/B/C/D，
-         * it will subscribe only A/B/C/# ，However,
-         * the linked list of records will store the above three subscription information
-         */
-        fun subscribeOptimize(subscribeOptimize: Boolean) = apply {
-            this.subscribeOptimize = subscribeOptimize
-        }
-
-        /**
-         * Automatic registration requires subscription topics,requests or subscription messages.
-         * If the message is not in the subscription collection,
-         * the subscription will be automatically added
-         * Note: backTopic must be a fully subscribed topic
-         * and cannot be part of the message body "mqttMessage"
-         */
-        fun autoRegister(autoRegister: Boolean) = apply {
-            this.autoRegister = autoRegister
         }
 
         /**
@@ -727,6 +739,10 @@ class MqttWrapperClient private constructor(
          * @return MqttWrapperClient
          */
         fun build(responseHandler: IResponseHandler): MqttWrapperClient {
+
+            if (this.connectOptions?.isCleanSession == false) {
+                this.autoSubscribe = false
+            }
 
             // If androidClient is not null,
             // it means that the developer wants to use the MqttAndroidClient created by himself
