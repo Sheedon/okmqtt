@@ -21,6 +21,24 @@ class Headers internal constructor(
         return builder
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Headers
+
+        if (attachRecord != other.attachRecord) return false
+        if (subscriptionType != other.subscriptionType) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = attachRecord.hashCode()
+        result = 31 * result + subscriptionType.hashCode()
+        return result
+    }
+
 
     class Builder {
         private var attachRecord: Boolean = false

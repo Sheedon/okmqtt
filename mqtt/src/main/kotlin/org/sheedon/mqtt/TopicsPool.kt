@@ -43,10 +43,11 @@ class TopicsPool {
                 return@forEach
             }
             push(path).also { pair ->
+                removeArray.addAll(pair.second)
                 pair.first?.let {
                     addArray.add(it)
+                    removeArray.remove(it)
                 }
-                removeArray.addAll(pair.second)
             }
         }
 
@@ -148,13 +149,13 @@ class TopicsPool {
 
     /**
      * 移除一个订阅路径集合
-     * @param paths 需要取消订阅的路径集合
+     * @param topics 需要取消订阅的路径集合
      * @return 包含实际需要订阅的路径集合，和取消订阅的路径集合
      */
-    fun pop(paths: List<Topics>): Pair<Set<Topics>, Set<Topics>> {
+    fun pop(topics: List<Topics>): Pair<Set<Topics>, Set<Topics>> {
         val addArray = mutableSetOf<Topics>()
         val removeArray = mutableSetOf<Topics>()
-        val targetList = paths.sortedWith(sortCondition)
+        val targetList = topics.sortedWith(sortCondition)
         // 排序翻转
         targetList.reversed()
 
@@ -165,6 +166,7 @@ class TopicsPool {
             pop(path).also { pair ->
                 addArray.addAll(pair.first)
                 pair.second?.let {
+                    addArray.remove(it)
                     removeArray.add(it)
                 }
             }

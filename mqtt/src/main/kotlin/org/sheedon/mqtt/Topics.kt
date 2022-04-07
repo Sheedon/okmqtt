@@ -41,6 +41,30 @@ class Topics(
 
     fun newBuilder(): Builder = Builder(this)
 
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Topics
+
+        if (topic != other.topic) return false
+        if (qos != other.qos) return false
+        if (userContext != other.userContext) return false
+        if (headers != other.headers) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = topic.hashCode()
+        result = 31 * result + qos
+        result = 31 * result + (userContext?.hashCode() ?: 0)
+        result = 31 * result + headers.hashCode()
+        return result
+    }
+
+
     open class Builder {
         // 主题
         internal var topic: String? = null
