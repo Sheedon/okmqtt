@@ -336,7 +336,7 @@ class MqttWrapperClient private constructor(
         // 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
         var subscribe: Topics? = null
         if (body.headers.attachRecord) {
-            subscribe = wildcardFiller.subscribe(body, this)
+            subscribe = wildcardFiller.subscribe(body, ::unsubscribeRealTopic)
         }
 
         subscribe?.let {
@@ -368,7 +368,7 @@ class MqttWrapperClient private constructor(
         listener: IMqttActionListener? = null
     ) {
 
-        val (topic, qos) = wildcardFiller.subscribe(bodies, this)
+        val (topic, qos) = wildcardFiller.subscribe(bodies, ::unsubscribeRealTopic)
 
         if (topic.isEmpty()) {
             Logger.info("not topic need subscribe!")
@@ -433,7 +433,7 @@ class MqttWrapperClient private constructor(
         var unsubscribe: Topics? = null
         if (body.headers.attachRecord) {
             //是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
-            unsubscribe = wildcardFiller.unsubscribe(body, this)
+            unsubscribe = wildcardFiller.unsubscribe(body, ::subscribeRealTopic)
         }
 
         unsubscribe?.let {
@@ -464,7 +464,7 @@ class MqttWrapperClient private constructor(
         bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
-        val topics = wildcardFiller.unsubscribe(bodies, this)
+        val topics = wildcardFiller.unsubscribe(bodies, ::subscribeRealTopic)
         if (topics.isEmpty()) {
             Logger.info("not topic need unsubscribe!")
             listener?.onSuccess(null)

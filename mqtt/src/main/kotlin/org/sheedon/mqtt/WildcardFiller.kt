@@ -30,7 +30,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      */
     internal fun subscribe(
         body: Topics,
-        client: MqttWrapperClient
+        unsubscribeRealTopic: (topics: Collection<String>) -> Unit
     ): Topics? {
         val (addTopics, removeTopics) = topicsPool.push(body)
 
@@ -40,7 +40,7 @@ internal class WildcardFiller @JvmOverloads constructor(
         }
 
         // 取消订阅的主题不为空，则取消订阅
-        unsubscribeTopic(removeTopics, client)
+        unsubscribeTopic(removeTopics, unsubscribeRealTopic)
 
         return addTopics
     }
@@ -52,7 +52,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      */
     internal fun subscribe(
         bodies: List<Topics>,
-        client: MqttWrapperClient
+        unsubscribeRealTopic: (topics: Collection<String>) -> Unit
     ): Pair<Collection<String>, Collection<Int>> {
 
         val (addTopics, removeTopics) = topicsPool.push(bodies)
@@ -69,7 +69,7 @@ internal class WildcardFiller @JvmOverloads constructor(
         }
 
         // 取消订阅的主题不为空，则取消订阅
-        unsubscribeTopic(removeTopics, client)
+        unsubscribeTopic(removeTopics, unsubscribeRealTopic)
 
         return Pair(topic, qos)
     }
@@ -79,7 +79,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      */
     private fun unsubscribeTopic(
         topic: Set<Topics>,
-        client: MqttWrapperClient
+        unsubscribeRealTopic: (topics: Collection<String>) -> Unit
     ) {
         // 取消订阅的主题不为空，则取消订阅
         topic.map {
@@ -90,7 +90,7 @@ internal class WildcardFiller @JvmOverloads constructor(
         }.takeIf {
             it.isNotEmpty()
         }?.run {
-            client.unsubscribeRealTopic(this)
+            unsubscribeRealTopic(this)
         }
     }
 
@@ -102,7 +102,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      */
     internal fun unsubscribe(
         body: Topics,
-        client: MqttWrapperClient
+        subscribeRealTopic: (Collection<String>, Collection<Int>) -> Unit
     ): Topics? {
 
         val (addTopics, removeTopics) = topicsPool.pop(body)
@@ -112,7 +112,7 @@ internal class WildcardFiller @JvmOverloads constructor(
         }
 
         // 订阅的主题不为空，则添加订阅
-        subscribeTopic(addTopics, client)
+        subscribeTopic(addTopics, subscribeRealTopic)
 
         return removeTopics
     }
@@ -124,7 +124,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      */
     internal fun unsubscribe(
         bodies: List<Topics>,
-        client: MqttWrapperClient
+        subscribeRealTopic: (Collection<String>, Collection<Int>) -> Unit
     ): Collection<String> {
 
         val (addTopics, removeTopics) = topicsPool.pop(bodies)
@@ -139,7 +139,7 @@ internal class WildcardFiller @JvmOverloads constructor(
         }
 
         // 订阅的主题不为空，则添加订阅
-        subscribeTopic(addTopics, client)
+        subscribeTopic(addTopics, subscribeRealTopic)
 
         return topic
     }
@@ -149,7 +149,7 @@ internal class WildcardFiller @JvmOverloads constructor(
      */
     private fun subscribeTopic(
         topic: Set<Topics>,
-        client: MqttWrapperClient
+        subscribeRealTopic: (Collection<String>, Collection<Int>) -> Unit
     ) {
         if (topic.isEmpty()) return
 
@@ -164,7 +164,7 @@ internal class WildcardFiller @JvmOverloads constructor(
             qosArray.add(it.qos)
         }
 
-        client.subscribeRealTopic(topicArray, qosArray)
+        subscribeRealTopic(topicArray, qosArray)
     }
 
     /**
