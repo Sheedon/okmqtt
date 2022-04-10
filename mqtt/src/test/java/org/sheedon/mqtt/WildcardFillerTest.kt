@@ -1,6 +1,5 @@
 package org.sheedon.mqtt
 
-import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.junit.Assert
 import org.junit.Test
 
