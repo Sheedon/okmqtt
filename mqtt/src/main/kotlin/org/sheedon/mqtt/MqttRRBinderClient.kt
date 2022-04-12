@@ -60,65 +60,64 @@ class MqttRRBinderClient constructor(
 ) : IDispatchManager {
 
     /**
-     * character set name
+     * Unified sets the MQTTMessage's payload encoding type.
      */
     private val charsetName: String = builder.charsetName
 
     /**
-     * default timeout method
+     * Request timeout value.
      */
     internal val timeout: Int = builder.timeout
 
     /**
-     * default dispatcher
+     * Request and response binder dispatcher
      */
     private val dispatcher: Dispatcher = builder.dispatcher!!
 
     /**
-     * Responsibilities Service Execution Environment
+     * Operating environment of the request and the response to use.
      */
     private val behaviorService: EventBehavior = builder.behaviorService
 
     /**
-     * Responsibilities Service Execution Environment
+     * Timeout event manager.
      */
     private val timeoutManager: TimeoutManager<Long> = builder.timeoutManager
 
     /**
-     * default request handler
+     * MQTT event handler,execute publish MQTT Message,subscribe and unsubscribe MQTT Topic
      */
     private val requestHandler: IRequestHandler = builder.requestHandler!!
 
     /**
-     * default bind handler
+     * Event bind handler to bind MQTT response and [request MQTT or subscribe MQTT Topic].
      */
     private val bindHandler: IBindHandler = builder.bindHandler!!
 
     /**
-     * default response handler
+     * MQTT Message response handler.
      */
     internal val responseHandler: IResponseHandler = builder.responseHandler!!
 
     /**
-     * default keyword converter
+     * Keyword converter collection
      */
     private val keywordConverters: ArrayList<DataConverter<ResponseBody, String>> =
         builder.keywordConverters
 
 
     /**
-     * load request handler
+     * Load MQTT event handler
      * */
     override fun requestHandler(): IRequestHandler = requestHandler
 
     /**
-     * load event behavior, Acts on asynchronous execution of tasks
+     * Operating environment of the request and the response to use.
      * */
     override fun eventBehavior(): EventBehavior = behaviorService
 
     /**
-     * load request handler
-     * If there are no additional settings, it is dispatcher
+     * Event bind handler to bind MQTT response and [request MQTT or subscribe MQTT Topic].
      * */
     override fun bindHandler(): IBindHandler = bindHandler
 
