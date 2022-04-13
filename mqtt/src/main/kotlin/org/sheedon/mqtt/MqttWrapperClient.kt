@@ -22,6 +22,7 @@ import org.eclipse.paho.android.service.MqttAndroidClient
 import kotlin.Throws
 import org.eclipse.paho.android.service.MqttAndroidClient.Ack
 import org.eclipse.paho.client.mqttv3.*
+import org.sheedon.mqtt.internal.WildcardFilter
 import org.sheedon.mqtt.internal.binder.IResponseHandler
 import org.sheedon.mqtt.listener.*
 import org.sheedon.mqtt.utils.Logger
@@ -30,6 +31,23 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 /**
+ * 旨在于维持「mqtt客户端」，执行以下行为：
+ * 1.mqtt连接。
+ * 2.重连。
+ * 3.断开连接。
+ * 4.订阅主题。
+ * 5.取消订阅主题。
+ * 6.发送mqtt消息。
+ * 7.断开自动重连
+ * 8.维持一个订阅消息过滤器。
+ *
+ * 订阅消息过滤器：在mqtt开发使用中，可能存在，依次订阅了存在包含的主题，
+ * 从而无法分别响应得到的消息，是否是因为重复订阅而存在重复。
+ * 例如：依次订阅：AA/BB/CC，AA/BB/#，当监听得到一个AA/BB/CC为主题的消息时，
+ * AA/BB/CC会收到一次，AA/BB/#也会收到一次，从而产生重复。
+ * 而订阅消息过滤器则是过滤包含主题造成的重复问题。
+ * 若依次监听「AA/BB/CC，AA/BB/#」，在监听「AA/BB/#」之前，会先取消订阅「AA/BB/CC」，取消「AA/BB/#」监听后，恢复「AA/BB/CC」监听。
+ * 若依次监听「AA/BB/#，AA/BB/CC」，不会监听「AA/BB/CC」，取消监听「AA/BB/#」后，再执行监听「AA/BB/CC」
  * Real mqtt wrapper scheduling client
  *
  * @Author: sheedon
@@ -40,128 +58,187 @@ class MqttWrapperClient private constructor(
     builder: Builder = Builder(),
     _responseHandler: IResponseHandler
 ) {
-    // 锁
+
+    // mqtt connect or disconnect add lock
     private val lock = Any()
 
-    // mqttAndroid客户端
+    // Implementation of the MQTT asynchronous client interface IMqttAsyncClient,
+    // using the MQTT android service to actually interface with MQTT server.
     private val mqttClient: MqttAndroidClient = builder.androidClient!!
 
-    // 连接配置选项
+    // Connects to an MQTT server using the default options.
     private val connectOptions: MqttConnectOptions = builder.connectOptions!!
 
-    // 断开连接缓冲配置
+    // The DisconnectedBufferOptions for this client
     private val bufferOpts: DisconnectedBufferOptions = builder.bufferOpts!!
 
-    // 消息监听者
+    // The global listener for the current mqtt client message
     private val messageListener: IMessageListener? = builder.callback
 
-    // 连接情况监听器
+    // The connect listener for this client
     private val connectListener: IActionListener? = builder.connectListener
+
+    // Auto reConnect mqtt service
     private val autoReconnect: Boolean = builder.connectOptions!!.isAutomaticReconnect
 
-    // 主题通配符过滤器
-    private val wildcardFiller: WildcardFiller = WildcardFiller(
+    // subscribe mqtt topic by wildcard filter
+    // append default subscribeBodies to WildcardFilter
+    private val wildcardFilter: WildcardFilter = WildcardFilter(
         builder.subscribeBodies
     )
 
-    // 订阅情况监听器
+    // The global listener for the subscribe mqtt topic
     private val subscribeListener: IActionListener? = builder.subscribeListener
+
+    // auto subscribe mqtt topic
     private val autoSubscribe: Boolean = builder.autoSubscribe
 
-    // 响应结果处理者
+    // response handler send MQTT Message to MqttRRBinderClient
     internal var responseHandler: IResponseHandler = _responseHandler
 
-    // 上一次重连时间
+    // record last connect time, connect interval time more than EXECUTE_INTERVAL
     private var lastConnectTime: Long = 0
+
+    // record last disconnect time, disconnect interval time more than EXECUTE_INTERVAL
     private var lastDisconnectTime: Long = 0
 
-    // 是否开始连接
-    private var isStartConnect = false
-    private var isStartDisconnect = false
+    // start connect flag
+    private var startConnect = false
 
+    // start disconnect flag
+    private var startDisconnect = false
+
+    // loop reconnect handler
     private val handler = Handler(Looper.myLooper()!!) {
         reConnect()
         true
     }
 
     /**
-     * mqtt连接动作的监听器
-     * 包括连接成功与否 和 重连
+     * Listener for mqtt action interface.
+     * it extends MqttCallbackExtended, IMqttActionListener and IActionListener
      */
     private interface MqttConnectActionListener : MqttCallbackExtended, IMqttActionListener,
         IActionListener
 
+    /**
+     * 1. Extension of [MqttCallbackExtended] to allow new callbacks
+     * without breaking the API for existing applications.
+     * 2. Implementors of this interface will be notified when an asynchronous action completes.
+     * 3. Implementors of wrapper actionListener with IMqttActionListener
+     */
     private val callbackListener: MqttConnectActionListener = object : MqttConnectActionListener {
 
         /**
-         * 连接成功
+         * This method is invoked when an action has completed successfully.
+         * First dispatch onSuccess() with the [IActionListener.ACTION.CONNECT] or [IActionListener.ACTION.DISCONNECT]
+         * by connectListener.
+         * Second reset connect status and disconnect status.
+         * Third auto subscribe MQTT Topic.
+         * At last remove reconnect event
+         *
+         * @param asyncActionToken associated with the action that has completed
          */
         override fun onSuccess(asyncActionToken: IMqttToken?) {
+            // According to the connection status, get the action.
             val action =
                 if (mqttClient.isConnected) {
                     IActionListener.ACTION.CONNECT
                 } else {
                     IActionListener.ACTION.DISCONNECT
                 }
-            connectListener?.onSuccess(action)
-            resetStatus()
-            autoSubscribe()
-            handler.removeCallbacksAndMessages(null)
+
+            this.onSuccess(action)
         }
 
+        /**
+         * This method is invoked when an action has completed successfully.
+         * First dispatch onSuccess() with the [IActionListener.ACTION.CONNECT] or [IActionListener.ACTION.DISCONNECT]
+         * by connectListener.
+         * Second reset connect status and disconnect status.
+         * Third auto subscribe MQTT Topic.
+         * At last remove reconnect event
+         *
+         * @param action associated action enum
+         */
         override fun onSuccess(action: IActionListener.ACTION) {
+            // notify result
             connectListener?.onSuccess(action)
+
             resetStatus()
-            autoSubscribe()
+
+            // if connected, auto subscribe
+            if (mqttClient.isConnected) {
+                autoSubscribe()
+            }
+
+            // remove reconnect event
             handler.removeCallbacksAndMessages(null)
         }
 
         /**
-         * 连接失败
+         * This method is invoked when an action fails.
+         * If a client is disconnected while an action is in progress
+         * onFailure will be called. For connections
+         * that use cleanSession set to false, any QoS 1 and 2 messages that
+         * are in the process of being delivered will be delivered to the requested
+         * quality of service next time the client connects.
+         *
+         * @param asyncActionToken associated with the action that has failed
+         * @param exception thrown by the action that has failed
          */
         override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
             val action =
-                if (mqttClient.isConnected) IActionListener.ACTION.DISCONNECT else IActionListener.ACTION.CONNECT
-            connectListener?.onFailure(action, exception)
-            resetStatus()
-            autoReconnect()
+                if (mqttClient.isConnected) {
+                    IActionListener.ACTION.DISCONNECT
+                } else {
+                    IActionListener.ACTION.CONNECT
+                }
+
+            this.onFailure(action, exception)
         }
 
         override fun onFailure(action: IActionListener.ACTION, exception: Throwable?) {
+            // notify result
             connectListener?.onFailure(action, exception)
+
             resetStatus()
+
+            // auto reconnect
             autoReconnect()
         }
 
         /**
-         * 连接断开
+         * This method is called when the connection to the server is lost.
+         * handle connect failure event to [onFailure]
+         *
+         * @param cause the reason behind the loss of connection.
          */
         override fun connectionLost(cause: Throwable) {
-            connectListener?.onFailure(IActionListener.ACTION.CONNECT, cause)
-            resetStatus()
-            autoReconnect()
+            this.onFailure(IActionListener.ACTION.CONNECT, cause)
         }
 
         /**
-         * 重新连接成功
+         * Called when the connection to the server is completed successfully.
+         *
+         * @param reconnect If true, the connection was the result of automatic reconnect.
+         * @param serverURI The server URI that the connection was made to.
          */
         override fun connectComplete(reconnect: Boolean, serverURI: String) {
-            connectListener?.onSuccess(IActionListener.ACTION.CONNECT)
-            resetStatus()
-            autoSubscribe()
-            handler.removeCallbacksAndMessages(null)
+            this.onSuccess(IActionListener.ACTION.CONNECT)
         }
 
         /**
-         * 重置连接状态
+         * Reset connection state.
+         * Use for connect or disconnect
          */
         private fun resetStatus() {
-            isStartConnect = false
-            isStartDisconnect = false
+            startConnect = false
+            startDisconnect = false
         }
 
         /**
-         * 自动重连
+         * Only when autoReconnect == true can the reconnect action be started
          */
         private fun autoReconnect() {
             if (autoReconnect) {
@@ -170,11 +247,13 @@ class MqttWrapperClient private constructor(
         }
 
         /**
-         * 自动订阅
+         * Automatically subscribe to topics with the help of wildcardFilter,
+         * that gets the set of topics that need to be subscribed
+         * and execute the subscription through mqttClient.
          * */
         private fun autoSubscribe() {
 
-            val subscribeBodies = wildcardFiller.topicsBodies
+            val subscribeBodies = wildcardFilter.topicsBodies
             if (subscribeBodies.isEmpty()) return
 
             val topic = mutableListOf<String>()
@@ -187,30 +266,69 @@ class MqttWrapperClient private constructor(
             mqttClient.subscribe(topic.toTypedArray(), qos.toIntArray())
         }
 
+        /**
+         * This method is called when a message arrives from the server.
+         *
+         * <p>
+         * This method is invoked synchronously by the MQTT client. An
+         * acknowledgment is not sent back to the server until this
+         * method returns cleanly.</p>
+         * <p>
+         * If an implementation of this method throws an <code>Exception</code>, then the
+         * client will be shut down.  When the client is next re-connected, any QoS
+         * 1 or 2 messages will be redelivered by the server.</p>
+         * <p>
+         * Any additional messages which arrive while an
+         * implementation of this method is running, will build up in memory, and
+         * will then back up on the network.</p>
+         * <p>
+         * If an application needs to persist data, then it
+         * should ensure the data is persisted prior to returning from this method, as
+         * after returning from this method, the message is considered to have been
+         * delivered, and will not be reproducible.</p>
+         * <p>
+         * It is possible to send a new message within an implementation of this callback
+         * (for example, a response to this message), but the implementation must not
+         * disconnect the client, as it will be impossible to send an acknowledgment for
+         * the message being processed, and a deadlock will occur.</p>
+         *
+         * @param topic name of the topic on the message was published to
+         * @param message the actual message.
+         * @throws Exception if a terminal error has occurred, and the client should be
+         * shut down.
+         */
         @Throws(Exception::class)
         override fun messageArrived(topic: String, message: MqttMessage) {
             messageListener?.messageArrived(topic, message)
             responseHandler.callResponse(topic, message)
         }
 
-        override fun deliveryComplete(token: IMqttDeliveryToken) {
-            // 暂时不执行该方法
-        }
+        /**
+         * Do not execute this method temporarily.
+         * Called when delivery for a message has been completed, and all
+         * acknowledgments have been received. For QoS 0 messages it is
+         * called once the message has been handed to the network for
+         * delivery. For QoS 1 it is called when PUBACK is received and
+         * for QoS 2 when PUBCOMP is received. The token will be the same
+         * token as that returned when the message was published.
+         *
+         * @param token the delivery token associated with the message.
+         */
+        override fun deliveryComplete(token: IMqttDeliveryToken) {}
     }
 
     companion object {
-        // 重试间隔 5秒
+        // Retry interval 5 seconds
         const val EXECUTE_INTERVAL = 5000
 
-        // 自动重连间隔 30秒
+        // Automatic reconnection interval 30 seconds
         const val AUTO_RECONNECT_INTERVAL = 30000L
 
-        // 重连消息ID
+        // Reconnect message ID
         const val MESSAGE_WHAT = 0x0101
     }
 
     init {
-
         mqttClient.setCallback(callbackListener)
         reConnect()
     }
@@ -220,11 +338,11 @@ class MqttWrapperClient private constructor(
      */
     private fun connect(listener: IMqttActionListener? = null) {
         synchronized(lock) {
-            if (mqttClient.isConnected || isStartConnect) {
+            if (mqttClient.isConnected || startConnect) {
                 return
             }
         }
-        isStartConnect = true
+        startConnect = true
         val realListener = createConnectListener(listener, IActionListener.ACTION.CONNECT)
         mqttClient.connect(connectOptions, realListener)
     }
@@ -238,7 +356,7 @@ class MqttWrapperClient private constructor(
     ) {
         val nowTime = System.currentTimeMillis()
         if (nowTime - lastConnectTime < EXECUTE_INTERVAL) {
-            isStartConnect = false
+            startConnect = false
             val throwable = Throwable("Only reconnect once within 5 seconds")
             failureAction(listener, connectListener, IActionListener.ACTION.CONNECT, throwable)
             return
@@ -258,12 +376,12 @@ class MqttWrapperClient private constructor(
      */
     private fun disconnect(listener: IMqttActionListener? = null) {
         synchronized(lock) {
-            if (!mqttClient.isConnected && isStartDisconnect) {
-                Logger.error("disconnect isConnected = $mqttClient.isConnected, isStartDisconnect = $isStartDisconnect")
+            if (!mqttClient.isConnected && startDisconnect) {
+                Logger.error("disconnect isConnected = $mqttClient.isConnected, isStartDisconnect = $startDisconnect")
                 return
             }
         }
-        isStartDisconnect = false
+        startDisconnect = false
         val realListener = createConnectListener(listener, IActionListener.ACTION.DISCONNECT)
         mqttClient.disconnect(connectOptions, realListener)
         Logger.info("disconnect")
@@ -273,7 +391,7 @@ class MqttWrapperClient private constructor(
     fun disConnect(listener: IMqttActionListener? = null) {
         val nowTime = System.currentTimeMillis()
         if (nowTime - lastDisconnectTime < EXECUTE_INTERVAL) {
-            isStartDisconnect = false
+            startDisconnect = false
             val throwable = Throwable("Only disconnect once within 5 seconds")
             failureAction(listener, connectListener, IActionListener.ACTION.DISCONNECT, throwable)
             return
@@ -336,7 +454,7 @@ class MqttWrapperClient private constructor(
         // 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
         var subscribe: Topics? = null
         if (body.headers.attachRecord) {
-            subscribe = wildcardFiller.subscribe(body, ::unsubscribeRealTopic)
+            subscribe = wildcardFilter.subscribe(body, ::unsubscribeRealTopic)
         }
 
         subscribe?.let {
@@ -368,7 +486,7 @@ class MqttWrapperClient private constructor(
         listener: IMqttActionListener? = null
     ) {
 
-        val (topic, qos) = wildcardFiller.subscribe(bodies, ::unsubscribeRealTopic)
+        val (topic, qos) = wildcardFilter.subscribe(bodies, ::unsubscribeRealTopic)
 
         if (topic.isEmpty()) {
             Logger.info("not topic need subscribe!")
@@ -433,7 +551,7 @@ class MqttWrapperClient private constructor(
         var unsubscribe: Topics? = null
         if (body.headers.attachRecord) {
             //是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
-            unsubscribe = wildcardFiller.unsubscribe(body, ::subscribeRealTopic)
+            unsubscribe = wildcardFilter.unsubscribe(body, ::subscribeRealTopic)
         }
 
         unsubscribe?.let {
@@ -464,7 +582,7 @@ class MqttWrapperClient private constructor(
         bodies: List<Topics>,
         listener: IMqttActionListener? = null
     ) {
-        val topics = wildcardFiller.unsubscribe(bodies, ::subscribeRealTopic)
+        val topics = wildcardFilter.unsubscribe(bodies, ::subscribeRealTopic)
         if (topics.isEmpty()) {
             Logger.info("not topic need unsubscribe!")
             listener?.onSuccess(null)
@@ -550,8 +668,8 @@ class MqttWrapperClient private constructor(
         listener: IMqttActionListener? = null
     ) {
 
-        val copyBodies = ArrayList(wildcardFiller.topicsBodies)
-        wildcardFiller.clear()
+        val copyBodies = ArrayList(wildcardFilter.topicsBodies)
+        wildcardFilter.clear()
         subscribe(bodies, object : IMqttActionListener {
             override fun onSuccess(asyncActionToken: IMqttToken?) {
                 listener?.onSuccess(asyncActionToken)
@@ -560,7 +678,7 @@ class MqttWrapperClient private constructor(
             }
 
             override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                wildcardFiller.clear()
+                wildcardFilter.clear()
                 // 重新订阅原来数据
                 subscribe(copyBodies)
                 Logger.error("subscribe onFailure", exception)
@@ -581,45 +699,23 @@ class MqttWrapperClient private constructor(
         return mqttClient.publish(topic, message)
     }
 
-    class Builder {
-        // mqtt的Android客户端
+    class Builder internal constructor() {
         internal var androidClient: MqttAndroidClient? = null
-
-        // 上下文，用于创建MqttAndroidClient
         private var context: Context? = null
-
-        // 服务地址
         private var serverURI: String? = null
-
-        // 设备ID
         private var clientId: String? = null
-
-        // Mqtt 客户端持久化
         private var persistence: MqttClientPersistence? = null
-
-        // Ack 反馈处理类型
         private var ackType: Ack? = null
 
-        // 连接配置选项
         internal var connectOptions: MqttConnectOptions?
-
-        // 断开连接缓冲选项
         internal var bufferOpts: DisconnectedBufferOptions?
 
-        // mqtt 反馈监听器
         internal var callback: IMessageListener? = null
-
-        // 连接情况监听器
         internal var connectListener: IActionListener? = null
 
-        // 订阅信息
         internal var subscribeBodies = mutableListOf<Topics>()
-
-        // 订阅情况监听器
         internal var subscribeListener: IActionListener? = null
 
-        // 在重新连接后，是否自动订阅,MqttConnectOptions isCleanSession == true and autoSubscribe == true,
-        // 才支持自动订阅
         internal var autoSubscribe: Boolean = true
 
         init {
@@ -638,7 +734,7 @@ class MqttWrapperClient private constructor(
         }
 
         /**
-         * Constructor- create an MqttAndroidClient that can be used to communicate
+         * Constructor - create an MqttAndroidClient that can be used to communicate
          * with an MQTT server on android
          *
          * @param context     used to pass context to the callback.
@@ -650,7 +746,6 @@ class MqttWrapperClient private constructor(
          * null then the default persistence mechanism is used
          * @param ackType     how the application wishes to acknowledge a message has been
          * processed.
-         * @return Builder
          */
         @JvmOverloads
         fun clientInfo(
@@ -668,22 +763,24 @@ class MqttWrapperClient private constructor(
         }
 
         /**
-         * set of connection parameters that override the defaults
+         * Sets of connection parameters that override the defaults.
+         * The connection will be established using the options specified in the
+         * [MqttConnectOptions] parameter.
+         * The default options is [DefaultMqttConnectOptions.default]
          *
          * @param options  connection parameters
          * @param <Option> MqttConnectOptions
-         * @return Builder
-        </Option> */
+         */
         fun <Option : MqttConnectOptions> connectOptions(options: Option) = apply {
             this.connectOptions = options
         }
 
         /**
-         * Sets the DisconnectedBufferOptions for this client
+         * Sets the DisconnectedBufferOptions for this client.
+         * The default bufferOpts is [DefaultDisconnectedBufferOptions.default]
          *
          * @param bufferOpts the DisconnectedBufferOptions
          * @param <Option>   DisconnectedBufferOptions
-         * @return Builder
          */
         fun <Option : DisconnectedBufferOptions> disconnectedBufferOptions(bufferOpts: Option) =
             apply {
@@ -691,20 +788,20 @@ class MqttWrapperClient private constructor(
             }
 
         /**
-         * Sets the MessageListener for this client
+         * Sets the global listener for the current mqtt client message.
+         * This listener receives MQTT Message, optional items.
          *
          * @param callback the MessageListener
-         * @return Builder
          */
         fun callback(callback: IMessageListener) = apply {
             this.callback = callback
         }
 
         /**
-         * Sets the MessageListener for this client
+         * Sets the connect listener for this client.
+         * Listen MQTT connect status.
          *
          * @param connectListener the connect action listener
-         * @return Builder
          */
         @JvmOverloads
         fun connectListener(
@@ -714,12 +811,15 @@ class MqttWrapperClient private constructor(
         }
 
         /**
-         * Sets the default subscribe info for this client and bind listener
+         * Subscribe to multiple topics, each of which may include wildcards,
+         * and add a global listener for the subscription result.
+         * autoSubscribe: After reconnecting, whether to subscribe automatically,
+         * MqttConnectOptions isCleanSession == true and autoSubscribe == true,
+         * only supports automatic subscription
          *
          * @param topicsBodies Subscribe topic and qos
          * @param subscribeListener The subscribe action listener
          * @param autoSubscribe Whether to subscribe automatically after reconnect
-         * @return Builder
          */
         @JvmOverloads
         fun subscribeBodies(
@@ -736,6 +836,7 @@ class MqttWrapperClient private constructor(
         /**
          * Build MqttWrapperClient by MqttWrapperClient.Builder
          *
+         * @param responseHandler it send MQTT Message to MqttRRBinderClient
          * @return MqttWrapperClient
          */
         fun build(responseHandler: IResponseHandler): MqttWrapperClient {
@@ -759,7 +860,10 @@ class MqttWrapperClient private constructor(
             }
             clientId = if (clientId.isNullOrEmpty()) UUID.randomUUID().toString() else clientId
             this.ackType = ackType ?: Ack.AUTO_ACK
+
+            // create MqttAndroidClient
             androidClient = MqttAndroidClient(context, serverURI, clientId, persistence, ackType)
+
             return MqttWrapperClient(this, responseHandler)
         }
     }
