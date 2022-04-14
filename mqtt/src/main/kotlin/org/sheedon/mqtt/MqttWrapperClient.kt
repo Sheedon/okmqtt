@@ -19,16 +19,14 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import org.eclipse.paho.android.service.MqttAndroidClient
-import kotlin.Throws
 import org.eclipse.paho.android.service.MqttAndroidClient.Ack
 import org.eclipse.paho.client.mqttv3.*
 import org.sheedon.mqtt.internal.WildcardFilter
 import org.sheedon.mqtt.internal.binder.IResponseHandler
 import org.sheedon.mqtt.listener.*
 import org.sheedon.mqtt.utils.Logger
-import java.lang.Exception
 import java.util.*
-import kotlin.collections.ArrayList
+import kotlin.jvm.Throws
 
 /**
  * 旨在于维持「mqtt客户端」，执行以下行为：
@@ -329,26 +327,24 @@ class MqttWrapperClient private constructor(
     }
 
     init {
+        // default bind callbackListener with mqttClient callback
+        // use for listen message
         mqttClient.setCallback(callbackListener)
+
+        // dispatch connect
         reConnect()
     }
 
     /**
-     * mqtt 创建连接
-     */
-    private fun connect(listener: IMqttActionListener? = null) {
-        synchronized(lock) {
-            if (mqttClient.isConnected || startConnect) {
-                return
-            }
-        }
-        startConnect = true
-        val realListener = createConnectListener(listener, IActionListener.ACTION.CONNECT)
-        mqttClient.connect(connectOptions, realListener)
-    }
-
-    /**
-     * 重连操作
+     * Reconnects to an MQTT server.
+     * The frequency of connecting mqtt is [EXECUTE_INTERVAL].
+     *
+     * @param listener
+     *            optional listener that will be notified when the connect
+     *            completes. Use null if not required.
+     * @throws MqttException
+     *             for any connected problems
+     * @see [connect]
      */
     @JvmOverloads
     fun reConnect(
@@ -366,27 +362,45 @@ class MqttWrapperClient private constructor(
         try {
             connect(listener)
             Logger.info("connect mqtt server")
-        } catch (e: Exception) {
+        } catch (e: MqttException) {
             failureAction(listener, connectListener, IActionListener.ACTION.CONNECT, e)
         }
     }
 
     /**
-     * mqtt 断开连接
+     * Connects to an MQTT server.
+     * Control the mqtt connection to verify [mqttClient.isConnected] and [startConnect] with the help of a lock.
+     * If listener is not null,callback mqtt connect action result.
+     *
+     * @param listener
+     *            optional listener that will be notified when the connect
+     *            completes. Use null if not required.
+     * @throws MqttException
+     *             for any connected problems
      */
-    private fun disconnect(listener: IMqttActionListener? = null) {
+    @Throws(MqttException::class)
+    private fun connect(listener: IMqttActionListener? = null) {
         synchronized(lock) {
-            if (!mqttClient.isConnected && startDisconnect) {
-                Logger.error("disconnect isConnected = $mqttClient.isConnected, isStartDisconnect = $startDisconnect")
+            if (mqttClient.isConnected || startConnect) {
                 return
             }
         }
-        startDisconnect = false
-        val realListener = createConnectListener(listener, IActionListener.ACTION.DISCONNECT)
-        mqttClient.disconnect(connectOptions, realListener)
-        Logger.info("disconnect")
+        startConnect = true
+        val realListener = createConnectListener(listener, IActionListener.ACTION.CONNECT)
+        mqttClient.connect(connectOptions, realListener)
     }
 
+    /**
+     * Disconnects to an MQTT server.
+     * The frequency of disconnecting mqtt is [EXECUTE_INTERVAL].
+     *
+     * @param listener
+     *            optional listener that will be notified when the disconnect
+     *            completes. Use null if not required.
+     * @throws MqttException
+     *             for any disconnected problems
+     * @see [disconnect]
+     */
     @JvmOverloads
     fun disConnect(listener: IMqttActionListener? = null) {
         val nowTime = System.currentTimeMillis()
@@ -407,7 +421,40 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 创建连接和断开的监听器
+     * Disconnects to an MQTT server.
+     * Control the mqtt disconnect to verify [mqttClient.isConnected] and [startDisconnect] with the help of a lock.
+     * If listener is not null,callback mqtt connect action result.
+     *
+     * @param listener
+     *            optional listener that will be notified when the disconnect
+     *            completes. Use null if not required.
+     * @throws MqttException
+     *             for any disconnected problems
+     */
+    @Throws(MqttException::class)
+    private fun disconnect(listener: IMqttActionListener? = null) {
+        synchronized(lock) {
+            if (!mqttClient.isConnected && startDisconnect) {
+                Logger.error("disconnect isConnected = $mqttClient.isConnected, isStartDisconnect = $startDisconnect")
+                return
+            }
+        }
+        startDisconnect = false
+        val realListener = createConnectListener(listener, IActionListener.ACTION.DISCONNECT)
+        mqttClient.disconnect(connectOptions, realListener)
+        Logger.info("disconnect")
+    }
+
+    /**
+     * Create IMqttActionListener implementation class.
+     * If listener is null, create and load callbackListener,
+     * else get after putting listener into wrapper class [RealCallbackListener].
+     *
+     * @param listener
+     *            optional listener that will be notified when the connect
+     *            completes. Use null if not required.
+     * @param action
+     *            action listener type by enum [IActionListener.ACTION]
      */
     private fun createConnectListener(
         listener: IMqttActionListener?,
@@ -422,12 +469,13 @@ class MqttWrapperClient private constructor(
 
 
     /**
-     * 失败动作的消息反馈
+     * If an action that fails to be scheduled needs to be executed,
+     * the current method is uniformly executed to provide feedback.
      *
-     * @param resultActionListener 方法调度时添加的反馈动作监听器
-     * @param actionCallback 全局监听的调度动作监听器
-     * @param action 动作类型
-     * @param throwable 错误信息
+     * @param resultActionListener callback action listener added during method dispatch
+     * @param actionCallback dispatch action listener for global listening
+     * @param action dispatch action type
+     * @param throwable  for any problems
      * */
     private fun failureAction(
         resultActionListener: IMqttActionListener? = null,
@@ -442,32 +490,47 @@ class MqttWrapperClient private constructor(
 
 
     /**
-     * 订阅mqtt主题
-     * @param body mqtt消息体
-     * @param listener 操作监听器
+     * Subscribe to a topic, which may include wildcards.
+     *
+     * @param body  wrapper mqtt topic body,
+     *              include topic,qos,userContext
+     * @param listener subscribe listener,
+     *                 optional listener that will be notified when the subscribe result.
      */
     @JvmOverloads
     fun subscribe(
         body: Topics,
         listener: IMqttActionListener? = null
     ) {
-        // 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
+        // Whether to append to the cache record,
+        // if false, it means a single subscription,
+        // after clearing the behavior, it will not be restored
         var subscribe: Topics? = null
         if (body.headers.attachRecord) {
             subscribe = wildcardFilter.subscribe(body, ::unsubscribeRealTopic)
         }
 
+        // dispatch real subscribe topic
         subscribe?.let {
-            subscribeRealTopic(it, listener)
+            try {
+                subscribeRealTopic(it, listener)
+            } catch (e: MqttException) {
+                Logger.error("failure action", e)
+            }
         }
     }
 
     /**
-     * 真实的订阅方法
+     * Subscribe real topic by mqtt client
      *
-     * @param body mqtt消息体
-     * @param listener 操作监听器
+     * @param body wrapper mqtt topic body,
+     *              include topic,qos,userContext
+     * @param listener subscribe listener,
+     *                 optional listener that will be notified when the subscribe result.
+     * @throws MqttException
+     *             if there was an error when registering the subscription.
      */
+    @Throws(MqttException::class)
     internal fun subscribeRealTopic(
         body: Topics,
         listener: IMqttActionListener? = null
@@ -476,9 +539,17 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 订阅mqtt主题
-     * @param bodies mqtt消息体集合
-     * @param listener 操作监听器
+     * Subscribes to multiple topics, each topic may include wildcards.
+     * <p>
+     * Provides an optimized way to subscribe to multiple topics compared to
+     * subscribing to each one individually.
+     * </p>
+     * @param bodies
+     *            one or more topics to subscribe to, which can include
+     *            wildcards
+     * @param listener
+     *            optional listener that will be notified when subscribe has
+     *            completed
      */
     @JvmOverloads
     fun subscribe(
@@ -495,15 +566,34 @@ class MqttWrapperClient private constructor(
         }
 
         // 执行真实的订阅一个主题集合
-        subscribeRealTopic(topic, qos, listener)
+        try {
+            subscribeRealTopic(topic, qos, listener)
+        } catch (e: MqttException) {
+            Logger.error("failure action", e)
+        } catch (e: IllegalArgumentException) {
+            Logger.error("failure action", e)
+        }
     }
 
     /**
-     * 真实的订阅方法
+     * subscribe to multiple topics, that reality, each topic may include wildcards.
+     * <p>
+     * Provides an optimized way to subscribe to multiple topics compared to
+     * subscribing to each one individually.
+     * </p>
      *
-     * @param body mqtt消息体
-     * @param listener 操作监听器
+     * @param bodies
+     *            one or more topics to subscribe to, which can include
+     *            wildcards
+     * @param listener
+     *            optional listener that will be notified when subscribe has
+     *            completed
+     * @throws MqttException
+     *             if there was an error registering the subscription.
+     * @throws IllegalArgumentException
+     *             if the two supplied arrays are not the same size.
      */
+    @Throws(MqttException::class, IllegalArgumentException::class)
     internal fun subscribeRealTopic(
         topicArray: Collection<String>,
         qosArray: Collection<Int>,
@@ -518,7 +608,9 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 订阅监听者实现类
+     * Subscription listener wrapper class.
+     * listener of current IMqttActionListener
+     * subscribeListener of global subscription listener
      */
     private inner class SubscribeListener(val listener: IMqttActionListener? = null) :
         IMqttActionListener {
@@ -537,9 +629,14 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 取消订阅mqtt主题
-     * @param body mqtt消息体
-     * @param listener 操作监听器
+     * Requests the server to unsubscribe the client from a topics.
+     *
+     * @param bodies
+     *            one or more topics to subscribe to, which can include
+     *            wildcards
+     * @param listener
+     *            optional listener that will be notified when unsubscribe has
+     *            completed
      */
     @JvmOverloads
     fun unsubscribe(
@@ -547,24 +644,37 @@ class MqttWrapperClient private constructor(
         listener: IMqttActionListener? = null
     ) {
 
-        // 是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
+        // Whether to append to the cache record,
+        // if false, it means a single subscription,
+        // after clearing the behavior, it will not be restored
         var unsubscribe: Topics? = null
         if (body.headers.attachRecord) {
-            //是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
+            // Whether to append to the cache record,
+            // if false, it means a single subscription, after clearing the behavior, it will not be restored
             unsubscribe = wildcardFilter.unsubscribe(body, ::subscribeRealTopic)
         }
 
+        // dispatch real unsubscribe topic
         unsubscribe?.let {
-            unsubscribeRealTopic(it, listener)
+            try {
+                unsubscribeRealTopic(it, listener)
+            } catch (e: MqttException) {
+                Logger.error("failure action", e)
+            }
         }
     }
 
     /**
-     * 真实的取消订阅方法
+     * unsubscribe real topic by mqtt client
      *
-     * @param body mqtt消息体
-     * @param listener 操作监听器
+     * @param body wrapper mqtt topic body,
+     *              include topic,qos,userContext
+     * @param listener subscribe listener,
+     *                 optional listener that will be notified when the subscribe result.
+     * @throws MqttException
+     *             if there was an error when registering the subscription.
      */
+    @Throws(MqttException::class)
     internal fun unsubscribeRealTopic(
         body: Topics,
         listener: IMqttActionListener? = null
@@ -573,9 +683,24 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 取消订阅mqtt主题
-     * @param bodies mqtt消息体集合
-     *  @param listener 操作监听器
+     * Requests the server to unsubscribe the client from one or more topics.
+     * <p>
+     * Unsubcribing is the opposite of subscribing. When the server receives the
+     * unsubscribe request it looks to see if it can find a matching
+     * subscription for the client and then removes it. After this point the
+     * server will send no more messages to the client for this subscription.
+     * </p>
+     * <p>
+     * The topic(s) specified on the unsubscribe must match the topic(s)
+     * specified in the original subscribe request for the unsubscribe to
+     * succeed
+     * </p>
+     * @param bodies
+     *            one or more topics to subscribe to, which can include
+     *            wildcards
+     * @param listener
+     *            optional listener that will be notified when subscribe has
+     *            completed
      */
     @JvmOverloads
     fun unsubscribe(
@@ -594,11 +719,28 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 真实的取消订阅方法
-     *
-     * @param body mqtt消息体
-     * @param listener 操作监听器
+     * Requests the server to unsubscribe the client from one or more topics.
+     * <p>
+     * Unsubcribing is the opposite of subscribing. When the server receives the
+     * unsubscribe request it looks to see if it can find a matching
+     * subscription for the client and then removes it. After this point the
+     * server will send no more messages to the client for this subscription.
+     * </p>
+     * <p>
+     * The topic(s) specified on the unsubscribe must match the topic(s)
+     * specified in the original subscribe request for the unsubscribe to
+     * succeed
+     * </p>
+     * @param bodies
+     *            one or more topics to subscribe to, which can include
+     *            wildcards
+     * @param listener
+     *            optional listener that will be notified when subscribe has
+     *            completed
+     * @throws MqttException
+     *            if there was an error unregistering the subscription.
      */
+    @Throws(MqttException::class)
     internal fun unsubscribeRealTopic(
         topics: Collection<String>,
         listener: IMqttActionListener? = null
@@ -607,7 +749,9 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 订阅监听者实现类
+     * UnSubscription listener wrapper class.
+     * listener of current IMqttActionListener
+     * subscribeListener of global subscription listener
      */
     internal inner class UnSubscribeListener(val listener: IMqttActionListener? = null) :
         IMqttActionListener {
@@ -626,15 +770,16 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 重新订阅mqtt主题
-     * 1. 取消原来订阅
-     * 2. 记录原来订阅信息，以备订阅失败做恢复处理，订阅当前配置信息
-     * 3. 第一步取消失败，则反馈订阅失败
-     * 4. 第二部订阅失败，则反馈订阅失败，恢复当前数据
-     * 否则订阅成功
+     * Resubscribe to mqtt topic
+     * 1. Cancel original subscription
+     * 2. Record the original subscription information for recovery processing in case of subscription failure,
+     * and subscribe to the current configuration information.
+     * 3. If the cancellation in the first step fails, the feedback subscription fails.
+     * 4. If the second subscription fails, the feedback subscription fails and the current data is restored.
+     * Otherwise the subscription is successful
      *
-     * @param bodies mqtt消息体集合
-     * @param listener 操作监听器
+     * @param bodies mqtt topic body collection
+     * @param listener Action listener
      */
     @JvmOverloads
     fun reSubscribe(
@@ -657,11 +802,11 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 重新订阅mqtt主题
-     * 在取消订阅成功后，进行重新订阅新的主题
+     * Resubscribe to mqtt topic.
+     * After unsubscribing successfully, re-subscribe to a new topic.
      *
-     * @param bodies mqtt消息体集合
-     * @param listener 操作监听器
+     * @param bodies mqtt topic body collection
+     * @param listener Action listener
      */
     private fun reSubscribeBySuccess(
         bodies: List<Topics>,
@@ -679,7 +824,7 @@ class MqttWrapperClient private constructor(
 
             override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
                 wildcardFilter.clear()
-                // 重新订阅原来数据
+                // Re-subscribe the original data
                 subscribe(copyBodies)
                 Logger.error("subscribe onFailure", exception)
                 listener?.onFailure(asyncActionToken, exception)
@@ -690,10 +835,24 @@ class MqttWrapperClient private constructor(
     }
 
     /**
-     * 发送mqtt消息
+     * Publishes a message to a topic on the server. Takes an
+     * [MqttMessage] message and delivers it to the server at the
+     * requested quality of service.
      *
-     * @param topic 主题
-     * @param message mqtt消息内容
+     * @param topic
+     *           to deliver the message to, for example "finance/stock/ibm".
+     * @param message
+     *           to deliver to the server
+     * @return token used to track and wait for the publish to complete. The
+     *         token will be passed to any callback that has been set.
+     * @throws MqttPersistenceException
+     *             when a problem occurs storing the message
+     * @throws IllegalArgumentException
+     *             if value of QoS is not 0, 1 or 2.
+     * @throws MqttException
+     *             for other errors encountered while publishing the message.
+     *             For instance client not connected.
+     * @see [mqttClient.publish]
      */
     fun publish(topic: String, message: MqttMessage): IMqttDeliveryToken {
         return mqttClient.publish(topic, message)
