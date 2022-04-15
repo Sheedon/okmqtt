@@ -1,4 +1,6 @@
-package org.sheedon.mqtt
+package org.sheedon.mqtt.internal
+
+import org.sheedon.mqtt.Topics
 
 /**
  * 通配符过滤类
@@ -8,7 +10,7 @@ package org.sheedon.mqtt
  * @Email: sheedonsun@163.com
  * @Date: 2022/2/25 5:58 下午
  */
-internal class WildcardFiller @JvmOverloads constructor(
+internal class WildcardFilter @JvmOverloads constructor(
     _topicsBodies: List<Topics> = mutableListOf()
 ) {
 

@@ -1,5 +1,6 @@
-package org.sheedon.mqtt
+package org.sheedon.mqtt.internal
 
+import org.sheedon.mqtt.Topics
 import java.lang.StringBuilder
 
 /**

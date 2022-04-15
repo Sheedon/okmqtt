@@ -1,4 +1,4 @@
-package org.sheedon.mqtt
+package org.sheedon.mqtt.internal
 
 import androidx.annotation.IntDef
 
