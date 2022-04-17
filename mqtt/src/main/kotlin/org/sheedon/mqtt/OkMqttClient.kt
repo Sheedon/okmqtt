@@ -18,20 +18,94 @@ package org.sheedon.mqtt
 import android.content.Context
 import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
+import org.sheedon.mqtt.MqttWrapperClient.Companion.EXECUTE_INTERVAL
 import org.sheedon.mqtt.internal.DataConverter
-import org.sheedon.mqtt.internal.binder.IBindHandler
-import org.sheedon.mqtt.internal.binder.IRequestHandler
-import org.sheedon.mqtt.internal.binder.IResponseHandler
+import org.sheedon.mqtt.internal.binder.*
 import org.sheedon.mqtt.internal.binder.MqttRequestHandler
 import org.sheedon.mqtt.internal.concurrent.EventBehavior
-import org.sheedon.mqtt.internal.log
+import org.sheedon.mqtt.internal.concurrent.EventBehaviorService
 import org.sheedon.mqtt.listener.*
 import org.sheedon.mqtt.utils.ILogger
 import org.sheedon.mqtt.utils.Logger
+import org.sheedon.rr.timeout.OnTimeOutListener
 import org.sheedon.rr.timeout.TimeoutManager
+import org.sheedon.rr.timeout.android.TimeOutHandler
 
 /**
- * Mqtt 门面客户端类，包含「请求响应客户端」和「mqtt调度客户端」
+ * Factory for [calls][Call], which can be used to send MQTT requests and read their responses,
+ * that is facade client class, including "request response client" and "mqtt dispatch client".
+ *
+ * ## OkMqttClient Should Be Shared
+ *
+ * Use `new OkMqttClient.Builder()` to create a shared instance with custom settings:
+ *
+ * ```java
+ * // The singleton MQTT client.
+ * public final OkMqttClient client = new OkMqttClient.Builder()
+ *     .clientInfo(context, serverUri, clientId)
+ *     .setLogger(new MqttLoggingLogger())
+ *     .build();
+ * ```
+ *
+ * ## Customize Your Client With newBuilder()
+ *
+ * You can customize a shared OkMqttClient instance with [newBuilder]. This builds a client that
+ * shares the same connection pool, thread pools, and configuration. Use the builder methods to
+ * add configuration to the derived client for a specific purpose.
+ *
+ * This example shows a call with submit mqtt message's payload by charsetName and 5 seconds request
+ * timeout. Original configuration is kept, but can be overridden.
+ *
+ * ```java
+ * OkHttpClient eagerClient = client.newBuilder()
+ *     .charsetName(Charsets.UTF_8.displayName())
+ *     .messageTimeout(5)
+ *     .build();
+ *
+ * Request request = new Request.Builder()
+ *     .backTopic("get_manager_list")
+ *     .topic("classify/device/recyclable/data/test")
+ *     .data(message)
+ *     .build();
+ *
+ * // request
+ * Call call = client.newCall(request);
+ * call.enqueue(new Callback() {
+ *     @Override
+ *     public void onResponse(@NonNull Call call, @NonNull Response response) {
+ *          // call response
+ *     }
+ *
+ *     @Override
+ *     public void onFailure(@Nullable Throwable e) {
+ *          // call mqtt fail response
+ *     }
+ * });
+ *
+ * // subscription
+ * Observable observable = client.newObservable(request);
+ * observable.enqueue(new Callback() {
+ *     @Override
+ *     public void onResponse(@NonNull Call call, @NonNull Response response) {
+ *          // call response
+ *     }
+ *
+ *     @Override
+ *     public void onFailure(@Nullable Throwable e) {
+ *          // call mqtt fail response
+ *     }
+ * });
+ * ```
+ *
+ * ## Shutdown Isn't Necessary by request Call,Shutdown is Necessary by request Observable.
+ *
+ * The threads and connections that are held will be released automatically if they remain idle. But
+ * if you are writing a application that needs to aggressively release unused resources you may do
+ * so.
+ *
+ * ```java
+ * observable.cancel();
+ * ```
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -41,12 +115,16 @@ class OkMqttClient internal constructor(
     builder: Builder
 ) : MqttFactory {
 
+    // MQTT request and response bind client
     private val mqttRRBinderClient: MqttRRBinderClient = builder.mqttRRBinderClient!!
+
+    // MQTT client wrapper class
     private val mqttClient: MqttWrapperClient = builder.mqttClient!!
 
     constructor() : this(Builder())
 
     init {
+        // attach MqttWrapperClient to requestHandler
         val requestHandler = mqttRRBinderClient.requestHandler()
         if (requestHandler is MqttRequestHandler) {
             requestHandler.attachClient(mqttClient)
@@ -54,44 +132,56 @@ class OkMqttClient internal constructor(
     }
 
     /**
-     * 默认超时时间单位（秒）
+     * Gets the request timeout value.
+     * This value, measured in seconds,defines the maximum time interval
+     * the request will wait for the network callback to the MQTT Message response to be established.
      */
     fun getDefaultTimeout(): Int {
         return mqttRRBinderClient.timeout
     }
 
     /**
-     * 创建请求响应的Call
+     * Create a call for a request-response
      *
-     * @param request 请求对象
-     * @return Call 用于执行入队/提交请求的动作
+     * @param request request object
+     * @return Call The action used to perform the enqueue submit request
      */
     override fun newCall(request: Request): Call {
         return mqttRRBinderClient.newCall(request)
     }
 
     /**
-     * 创建信息的观察者 Listener
+     * An observer Observable that creates information
+     * Single topic subscription
      *
-     * @param request 请求对象
-     * @return Listener 订阅某个主题，监听该主题的消息
+     * @param request request object
+     * @return Observable Subscribe to a topic and listen for messages from that topic
      */
     override fun newObservable(request: Request): Observable {
         return mqttRRBinderClient.newObservable(request)
     }
 
     /**
-     * 创建信息的观察者 Listener
+     * An observer Observable that creates information
+     * Multi-topic, subscription to the same result
      *
-     * @param subscribe 订阅对象
-     * @return Listener 订阅某个主题，监听该主题的消息
+     * @param subscribe subscribe object
+     * @return Observable Subscribe to a topic and listen for messages from that topic
      */
     override fun newObservable(subscribe: Subscribe): Observable {
         return mqttRRBinderClient.newObservable(subscribe)
     }
 
     /**
-     * 重连操作
+     * Reconnects to an MQTT server.
+     * The frequency of connecting mqtt is [EXECUTE_INTERVAL].
+     *
+     * @param listener
+     *            optional listener that will be notified when the connect
+     *            completes. Use null if not required.
+     * @throws MqttException
+     *             for any connected problems
+     * @see [mqttClient.reConnect]
      */
     @JvmOverloads
     fun reConnect(
@@ -107,9 +197,12 @@ class OkMqttClient internal constructor(
 
 
     /**
-     * 订阅mqtt主题
-     * @param body mqtt消息体
-     * @param listener 操作监听器
+     * Subscribe to a topic, which may include wildcards.
+     *
+     * @param body  wrapper mqtt topic body,
+     *              include topic,qos,userContext
+     * @param listener subscribe listener,
+     *                 optional listener that will be notified when the subscribe result.
      */
     @JvmOverloads
     fun subscribe(
@@ -120,9 +213,17 @@ class OkMqttClient internal constructor(
     }
 
     /**
-     * 订阅mqtt主题
-     * @param bodies mqtt消息体集合
-     * @param listener 操作监听器
+     * Subscribes to multiple topics, each topic may include wildcards.
+     * <p>
+     * Provides an optimized way to subscribe to multiple topics compared to
+     * subscribing to each one individually.
+     * </p>
+     * @param bodies
+     *            one or more topics to subscribe to, which can include
+     *            wildcards
+     * @param listener
+     *            optional listener that will be notified when subscribe has
+     *            completed
      */
     @JvmOverloads
     fun subscribe(
@@ -133,9 +234,14 @@ class OkMqttClient internal constructor(
     }
 
     /**
-     * 取消订阅mqtt主题
-     * @param body mqtt消息体
-     * @param listener 操作监听器
+     * Requests the server to unsubscribe the client from a topics.
+     *
+     * @param bodies
+     *            one or more topics to subscribe to, which can include
+     *            wildcards
+     * @param listener
+     *            optional listener that will be notified when unsubscribe has
+     *            completed
      */
     @JvmOverloads
     fun unsubscribe(
@@ -146,9 +252,24 @@ class OkMqttClient internal constructor(
     }
 
     /**
-     * 取消订阅mqtt主题
-     * @param bodies mqtt消息体集合
-     * @param listener 操作监听器
+     * Requests the server to unsubscribe the client from one or more topics.
+     * <p>
+     * Unsubcribing is the opposite of subscribing. When the server receives the
+     * unsubscribe request it looks to see if it can find a matching
+     * subscription for the client and then removes it. After this point the
+     * server will send no more messages to the client for this subscription.
+     * </p>
+     * <p>
+     * The topic(s) specified on the unsubscribe must match the topic(s)
+     * specified in the original subscribe request for the unsubscribe to
+     * succeed
+     * </p>
+     * @param bodies
+     *            one or more topics to subscribe to, which can include
+     *            wildcards
+     * @param listener
+     *            optional listener that will be notified when subscribe has
+     *            completed
      */
     @JvmOverloads
     fun unsubscribe(
@@ -159,10 +280,16 @@ class OkMqttClient internal constructor(
     }
 
     /**
-     * 重新订阅mqtt主题
+     * Resubscribe to mqtt topic
+     * 1. Cancel original subscription
+     * 2. Record the original subscription information for recovery processing in case of subscription failure,
+     * and subscribe to the current configuration information.
+     * 3. If the cancellation in the first step fails, the feedback subscription fails.
+     * 4. If the second subscription fails, the feedback subscription fails and the current data is restored.
+     * Otherwise the subscription is successful
      *
-     * @param bodies mqtt消息体集合
-     * @param listener 操作监听器
+     * @param bodies mqtt topic body collection
+     * @param listener Action listener
      */
     @JvmOverloads
     fun reSubscribe(
@@ -173,10 +300,17 @@ class OkMqttClient internal constructor(
     }
 
     /**
-     * 发送mqtt消息
+     * Publishes a message to a topic on the server. Takes an
+     * [MqttMessage] message and delivers it to the server at the
+     * requested quality of service.
      *
-     * @param topic 主题
-     * @param message mqtt消息内容
+     * @param topic
+     *           to deliver the message to, for example "finance/stock/ibm".
+     * @param message
+     *           to deliver to the server
+     * @return token used to track and wait for the publish to complete. The
+     *         token will be passed to any callback that has been set.
+     * @see [mqttClient.publish]
      */
     fun publish(topic: String, message: MqttMessage): IMqttDeliveryToken {
         return mqttClient.publish(topic, message)
@@ -191,36 +325,24 @@ class OkMqttClient internal constructor(
         internal val mqttBuilder: MqttWrapperClient.Builder = MqttWrapperClient.Builder()
 
         /**
-         * 设置 mqtt 请求响应绑定客户端
-         * @param mqttRRBinderClient 请求响应绑定客户端
-         */
-        fun mqttRRBinderClient(mqttRRBinderClient: MqttRRBinderClient) = apply {
-            this.mqttRRBinderClient = mqttRRBinderClient
-        }
-
-        /**
-         * 设置 mqtt调度客户端
-         * @param mqttClient mqtt调度客户端
-         */
-        fun mqttClient(mqttClient: MqttWrapperClient) = apply {
-            this.mqttClient = mqttClient
-        }
-
-        /**
-         * 设置字符集编码类型，在接收数据时转化为指定格式的字符串
+         * Unified sets the MQTTMessage's payload encoding type.
+         * If [RequestBody.autoEncode] is true and [RequestBody.charset] is null,
+         * set MQTTMessage's payload encoding type by this value.
+         * The default charsetName is `UTF-8`.
          *
-         * @param charsetName 字符集编码类型
-         * @return Builder 构建者
+         * @param charsetName Character set encoding type
          */
         fun charsetName(charsetName: String) = apply {
             this.mqttRRBinderBuilder.charsetName(charsetName)
         }
 
         /**
-         * 设置信息请求超时时间（单位秒）
+         * Sets the request timeout value.
+         * This value, measured in seconds,defines the maximum time interval
+         * the request will wait for the network callback to the MQTT Message response to be established.
+         * The default timeout is 5 seconds.
          *
-         * @param timeout 超时时间
-         * @return Builder<BackTopic></BackTopic>, ID> 构建者
+         * @param timeout the timeout value, measured in seconds. It must be &gt;0
          */
         fun messageTimeout(timeout: Int) = apply {
             if (timeout < 0) return this
@@ -228,56 +350,71 @@ class OkMqttClient internal constructor(
         }
 
         /**
-         * 设置行为线程池，后加的靠前
+         * Sets operating environment of the request and the response to use.
+         * Use [behaviorService] to provide Call and Observable with a thread pool for execution.
+         * The default behaviorService is [EventBehaviorService]
          *
-         * @param behaviorService 执行服务环境
-         * @return Builder<BackTopic></BackTopic>, ID>
+         * @param behaviorService the execution service environment to use
          */
         fun behaviorService(behaviorService: EventBehavior) = apply {
             this.mqttRRBinderBuilder.behaviorService(behaviorService)
         }
 
         /**
-         * 设置超时处理者
+         * Sets timeout event manager.
+         * Use [timeoutManager] to hold and execute timeout events by timeout time, when the timeout condition is reached,
+         * execute the callback of the event with the help of [OnTimeOutListener].
+         * Use [TimeoutManager.removeEvent] to cancel and remove timeout events with message ID.
+         * The default timeoutManager is [TimeOutHandler].
          *
-         * @param timeoutManager 事件管理
-         * @return Builder<BackTopic></BackTopic>, ID>
+         * @param timeoutManager timeout event manager
          */
         fun timeoutManager(timeoutManager: TimeoutManager<Long>) = apply {
             this.mqttRRBinderBuilder.timeoutManager(timeoutManager)
         }
 
         /**
-         * 设置请求调度者
+         * Sets MQTT event handler.
+         * Use [requestHandler] to execute publish MQTT Message,subscribe and unsubscribe MQTT Topic.
+         * The default requestHandler is [MqttRequestHandler], it agent [MqttWrapperClient] executes
+         * the events of publish MQTT Message,subscribe and unsubscribe MQTT Topic.
          *
-         * @param requestHandler 请求调度者
+         * @param requestHandler MQTT event request handler
          */
         fun requestAdapter(requestHandler: IRequestHandler) = apply {
             this.mqttRRBinderBuilder.requestHandler(requestHandler)
         }
 
         /**
-         * 设置绑定调度者
+         * Sets event bind handler to bind MQTT response and [request MQTT or subscribe MQTT Topic].
+         * Use [bindHandler] to associate RealCall or RealObservable with IBack, after getting the message,
+         * feedback through IBack, and also support to remove the binding relationship through the message ID.
          *
-         * @param requestHandler 请求和响应绑定处理程序
+         * @param bindHandler request and response bind handler
          */
         fun bindHandler(bindHandler: IBindHandler) = apply {
             this.mqttRRBinderBuilder.bindHandler(bindHandler)
         }
 
         /**
-         * 设置 mqtt 响应处理程序
+         * Sets MQTT Message response handler.
+         * Use [responseHandler] callResponse MQTT topic and MQTT Message.
+         * The default responseHandler is [MqttResponseHandler],it agent [Dispatcher] executes
+         * the events of callResponse.
          *
-         * @param requestHandler 响应绑定处理程序
+         * @param responseHandler response handler
          */
         fun responseHandler(responseHandler: IResponseHandler) = apply {
             this.mqttRRBinderBuilder.responseHandler(responseHandler)
         }
 
         /**
-         * 设置反馈关键字转换器集合
+         * Sets keyword converter collection.
+         * Used to convert topics or messages into corresponding keywords
+         * to match distribution messages in real business.
+         * The default value is empty collection.
          *
-         * @param keywordConverters 反馈主题转换器集合
+         * @param keywordConverters Keyword converter Collection
          */
         fun keywordConverters(keywordConverters: List<DataConverter<ResponseBody, String>>) =
             apply {
@@ -285,9 +422,11 @@ class OkMqttClient internal constructor(
             }
 
         /**
-         * 设置反馈关键字转换器
+         * Sets keyword converter
+         * Used to convert topics or messages into corresponding keywords
+         * to match distribution messages in real business.
          *
-         * @param backTopicConverter 反馈主题转换器
+         * @param keywordConverters keyword converter cannot null
          */
         fun keywordConverter(keywordConverter: DataConverter<ResponseBody, String>) =
             apply {
@@ -394,57 +533,29 @@ class OkMqttClient internal constructor(
         }
 
         /**
-         * 是否开启log
+         * Sets whether to start the log
          *
-         * @param showMqttLog 是否开启 Mqtt 调度者的log
-         * @return Builder<BackTopic></BackTopic>, ID>
+         * @param showLog Whether to enable the log of the Mqtt scheduler
          */
         @JvmOverloads
-        fun openLog(showMqttLog: Boolean, openRRBindLog: Boolean = false) = apply {
-            Logger.showLog(showMqttLog)
-            log.showLog(openRRBindLog)
+        fun openLog(showLog: Boolean = false) = apply {
+            Logger.showLog(showLog)
         }
 
         /**
-         * 是否开启显示堆栈跟踪
+         * Sets whether to enable display stack trace
          *
-         * @param isShowStackTrace 是否显示堆栈跟踪
-         * @return Builder<BackTopic></BackTopic>, ID>
+         * @param isShowStackTrace whether to show stack trace
          */
         @JvmOverloads
-        fun openStackTrace(isShowStackTrace: Boolean, openRRBindTrace: Boolean = false) = apply {
-            Logger.showStackTrace(isShowStackTrace)
-            log.showStackTrace(openRRBindTrace)
+        fun openStackTrace(showStackTrace: Boolean = false) = apply {
+            Logger.showStackTrace(showStackTrace)
         }
 
         /**
-         * Whether to activate subscription optimization.
-         * After subscription optimization is activated,
-         * inclusive subscriptions will no longer be repeated subscriptions
-         * For example：A/B/C/# and A/B/C/+ and A/B/C/D，
-         * it will subscribe only A/B/C/# ，However,
-         * the linked list of records will store the above three subscription information
-         */
-        fun subscribeOptimize(subscribeOptimize: Boolean) = apply {
-            this.mqttBuilder.subscribeOptimize(subscribeOptimize)
-        }
-
-        /**
-         * Automatic registration requires subscription topics,requests or subscription messages.
-         * If the message is not in the subscription collection,
-         * the subscription will be automatically added
-         * Note: backTopic must be a fully subscribed topic
-         * and cannot be part of the message body "mqttMessage"
-         */
-        fun autoRegister(autoRegister: Boolean) = apply {
-            this.mqttBuilder.autoRegister(autoRegister)
-        }
-
-        /**
-         * 配置自定义的Logger
+         * Configure a custom Logger
          *
          * @param logger Logger
-         * @return Builder<BackTopic></BackTopic>, ID>
          */
         fun setLogger(logger: ILogger) = apply {
             Logger.setLogger(logger)

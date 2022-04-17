@@ -21,7 +21,7 @@ import org.sheedon.mqtt.internal.concurrent.NamedRunnable
 import org.sheedon.mqtt.internal.connection.responsibility.ListenPlan
 import org.sheedon.mqtt.internal.connection.responsibility.SubscribePlan
 import org.sheedon.mqtt.internal.connection.responsibility.UnSubscribePlan
-import org.sheedon.mqtt.internal.log
+import org.sheedon.mqtt.utils.Logger
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -142,14 +142,14 @@ class RealObservable private constructor(
         canceled = true
         // 未开始处理则结束，否则尝试停止请求调度
         if (!isExecuted()) {
-            log.info(
+            Logger.info(
                 "Dispatcher",
                 "The body not started by ${originalRequest ?: originalSubscribe}"
             )
             return
         }
 
-        log.info(
+        Logger.info(
             "Dispatcher",
             "The body cancel by ${originalRequest ?: originalSubscribe}"
         )
@@ -177,7 +177,7 @@ class RealObservable private constructor(
 
         override fun execute() {
             if (isCanceled()) {
-                log.warning(
+                Logger.warning(
                     "Dispatcher",
                     "request is canceled by $originalRequest"
                 )

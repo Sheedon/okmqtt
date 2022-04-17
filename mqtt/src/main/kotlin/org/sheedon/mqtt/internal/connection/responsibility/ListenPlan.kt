@@ -3,7 +3,7 @@ package org.sheedon.mqtt.internal.connection.responsibility
 import org.sheedon.mqtt.internal.connection.Plan
 import org.sheedon.mqtt.internal.connection.RealObservable
 import org.sheedon.mqtt.internal.connection.RealPlan
-import org.sheedon.mqtt.internal.log
+import org.sheedon.mqtt.utils.Logger
 
 /**
  * 监听职责环节 plan
@@ -41,12 +41,12 @@ class ListenPlan(
 
     private fun proceedRequest(call: RealObservable) {
         if (call.isCanceled()) {
-            log.info("Dispatcher", "listenPlan to cancel proceed by ${call.originalRequest}")
+            Logger.info("Dispatcher", "listenPlan to cancel proceed by ${call.originalRequest}")
             return
         }
 
         val request = call.originalRequest
-        log.info("Dispatcher", "listenPlan to proceed by $request")
+        Logger.info("Dispatcher", "listenPlan to proceed by $request")
 
 
         val dispatcher = call.dispatcher
@@ -71,12 +71,12 @@ class ListenPlan(
 
     private fun proceedSubscribe(call: RealObservable) {
         if (call.isCanceled()) {
-            log.info("Dispatcher", "listenPlan to cancel proceed by ${call.originalSubscribe}")
+            Logger.info("Dispatcher", "listenPlan to cancel proceed by ${call.originalSubscribe}")
             return
         }
 
         val subscribe = call.originalSubscribe
-        log.info("Dispatcher", "listenPlan to proceed by $subscribe")
+        Logger.info("Dispatcher", "listenPlan to proceed by $subscribe")
         val dispatcher = call.dispatcher
         val relations = subscribe?.relations
 

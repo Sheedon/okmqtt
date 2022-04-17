@@ -8,7 +8,7 @@ import org.sheedon.mqtt.SubscribeBack
 import org.sheedon.mqtt.SubscriptionType
 import org.sheedon.mqtt.internal.IDispatchManager
 import org.sheedon.mqtt.internal.connection.*
-import org.sheedon.mqtt.internal.log
+import org.sheedon.mqtt.utils.Logger
 
 /**
  * 取消订阅职责环节 plan
@@ -52,12 +52,12 @@ class SubscribePlan(
      */
     private fun proceedRealCall(call: RealCall) {
         if (call.isCanceled()) {
-            log.info("Dispatcher", "subscribePlan to cancel proceed by ${call.originalRequest}")
+            Logger.info("Dispatcher", "subscribePlan to cancel proceed by ${call.originalRequest}")
             return
         }
 
         val request = call.originalRequest
-        log.info("Dispatcher", "subscribePlan to proceed by $request")
+        Logger.info("Dispatcher", "subscribePlan to proceed by $request")
         val relation = request.relation
         val dispatcher = call.dispatcher
 
@@ -91,14 +91,14 @@ class SubscribePlan(
     private fun proceedRequest(observable: RealObservable) {
         val request = observable.originalRequest!!
         if (observable.isCanceled()) {
-            log.info(
+            Logger.info(
                 "Dispatcher",
                 "subscribePlan to cancel proceed by $request"
             )
             return
         }
 
-        log.info("Dispatcher", "subscribePlan to proceed by $request")
+        Logger.info("Dispatcher", "subscribePlan to proceed by $request")
         val relation = request.relation
         val dispatcher = observable.dispatcher
         proceed(relation, dispatcher)
@@ -112,16 +112,16 @@ class SubscribePlan(
         // subscribe 订阅数据
         val subscribe = observable.originalSubscribe
         if (observable.isCanceled()) {
-            log.info(
+            Logger.info(
                 "Dispatcher",
                 "subscribePlan to cancel proceed by $subscribe"
             )
             return
         }
 
-        log.info("Dispatcher", "subscribePlan to proceed by $subscribe")
+        Logger.info("Dispatcher", "subscribePlan to proceed by $subscribe")
         val topicArray = subscribe?.run {
-            log.info("Dispatcher", "subscribePlan to proceed by $this")
+            Logger.info("Dispatcher", "subscribePlan to proceed by $this")
             // 关联者，得到主题集合
             relations
         }?.mapNotNull {
@@ -229,7 +229,7 @@ class SubscribePlan(
      * */
     private fun unSubscribeByRealCall(call: RealCall) {
         val request = call.originalRequest
-        log.info("Dispatcher", "subscribePlan to cancel by $request")
+        Logger.info("Dispatcher", "subscribePlan to cancel by $request")
         val relation = request.relation
         val dispatcher = call.dispatcher
         dispatcher.requestHandler().unsubscribe(relation.topics!!)
@@ -244,7 +244,7 @@ class SubscribePlan(
         // request 取消订阅行为
         val request = observable.originalRequest
         if (request != null) {
-            log.info("Dispatcher", "subscribePlan to cancel by $request")
+            Logger.info("Dispatcher", "subscribePlan to cancel by $request")
             val relation = request.relation
             val dispatcher = observable.dispatcher
             dispatcher.requestHandler().unsubscribe(relation.topics!!)
@@ -254,7 +254,7 @@ class SubscribePlan(
         // subscribe 取消订阅行为
         val subscribe = observable.originalSubscribe
         subscribe?.run {
-            log.info("Dispatcher", "subscribePlan to cancel by $this")
+            Logger.info("Dispatcher", "subscribePlan to cancel by $this")
             // 关联者，得到主题集合
             relations
         }?.mapNotNull {

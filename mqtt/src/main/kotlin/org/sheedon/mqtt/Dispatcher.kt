@@ -15,7 +15,7 @@ import org.sheedon.mqtt.internal.concurrent.RequestCallArray
 import org.sheedon.mqtt.internal.connection.Listen
 import org.sheedon.mqtt.internal.connection.RealCall
 import org.sheedon.mqtt.internal.connection.RealObservable
-import org.sheedon.mqtt.internal.log
+import org.sheedon.mqtt.utils.Logger
 import org.sheedon.rr.timeout.DelayEvent.Companion.build
 import org.sheedon.rr.timeout.OnTimeOutListener
 import org.sheedon.rr.timeout.android.TimeOutHandler
@@ -71,7 +71,7 @@ internal class Dispatcher(
         back: IBack
     ): Pair<Long, Long> {
 
-        log.error("Dispatcher", "subscribe to call: $call and type: ${CallbackEnum.SINGLE}")
+        Logger.error("Dispatcher", "subscribe to call: $call and type: ${CallbackEnum.SINGLE}")
 
         val request = call.originalRequest
 
@@ -104,7 +104,7 @@ internal class Dispatcher(
      * @param back 呼叫对象，用于反馈结果
      */
     override fun subscribe(observable: RealObservable, back: IBack): List<Long> {
-        log.error("Dispatcher", "subscribe to call: $observable and type: ${CallbackEnum.RETAIN}")
+        Logger.error("Dispatcher", "subscribe to call: $observable and type: ${CallbackEnum.RETAIN}")
 
         // 将ID返回到调度者，以做后续取消订阅动作
         return observerCalls.subscribe(
@@ -123,7 +123,7 @@ internal class Dispatcher(
      */
     private fun appendTimeoutEvent(timeout: Long, id: Long) {
         val event = build(id, timeout + System.currentTimeMillis())
-        log.error("Dispatcher", "addBinder to addEvent success")
+        Logger.error("Dispatcher", "addBinder to addEvent success")
         timeoutHandler.addEvent(event)
     }
 
@@ -245,7 +245,7 @@ internal class Dispatcher(
         override fun onTimeOut(id: Long, e: TimeoutException?) {
             val readyTask = readyCalls.remove(id) ?: return
 
-            log.info("Dispatcher", "onTimeout task($readyTask)")
+            Logger.info("Dispatcher", "onTimeout task($readyTask)")
 
             // 移除请求订阅内容
             requestCalls.unsubscribe(readyTask.listen)

@@ -8,7 +8,7 @@ import org.sheedon.mqtt.SubscribeBack
 import org.sheedon.mqtt.SubscriptionType
 import org.sheedon.mqtt.internal.IDispatchManager
 import org.sheedon.mqtt.internal.connection.*
-import org.sheedon.mqtt.internal.log
+import org.sheedon.mqtt.utils.Logger
 
 /**
  * 订阅职责环节 plan
@@ -51,14 +51,14 @@ class UnSubscribePlan(
     private fun proceedRequest(observable: RealObservable) {
         val request = observable.originalRequest!!
         if (observable.isCanceled()) {
-            log.info(
+            Logger.info(
                 "Dispatcher",
                 "subscribePlan to cancel proceed by $request"
             )
             return
         }
 
-        log.info("Dispatcher", "subscribePlan to proceed by $request")
+        Logger.info("Dispatcher", "subscribePlan to proceed by $request")
         val relation = request.relation
         val dispatcher = observable.dispatcher
         proceed(relation, dispatcher)
@@ -72,16 +72,16 @@ class UnSubscribePlan(
         // subscribe 订阅数据
         val subscribe = observable.originalSubscribe
         if (observable.isCanceled()) {
-            log.info(
+            Logger.info(
                 "Dispatcher",
                 "subscribePlan to cancel proceed by $subscribe"
             )
             return
         }
 
-        log.info("Dispatcher", "subscribePlan to proceed by $subscribe")
+        Logger.info("Dispatcher", "subscribePlan to proceed by $subscribe")
         val topicArray = subscribe?.run {
-            log.info("Dispatcher", "subscribePlan to proceed by $this")
+            Logger.info("Dispatcher", "subscribePlan to proceed by $this")
             // 关联者，得到主题集合
             relations
         }?.mapNotNull {
@@ -180,7 +180,7 @@ class UnSubscribePlan(
         // request 取消订阅行为
         val request = observable.originalRequest
         if (request != null) {
-            log.info("Dispatcher", "subscribePlan to cancel by $request")
+            Logger.info("Dispatcher", "subscribePlan to cancel by $request")
             val relation = request.relation
             val dispatcher = observable.dispatcher
             dispatcher.requestHandler().subscribe(relation.topics!!)
@@ -190,7 +190,7 @@ class UnSubscribePlan(
         // subscribe 取消订阅行为
         val subscribe = observable.originalSubscribe
         subscribe?.run {
-            log.info("Dispatcher", "subscribePlan to cancel by $this")
+            Logger.info("Dispatcher", "subscribePlan to cancel by $this")
             // 关联者，得到主题集合
             relations
         }?.mapNotNull {

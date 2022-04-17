@@ -4,7 +4,7 @@ import org.sheedon.mqtt.RequestBody
 import org.sheedon.mqtt.internal.connection.Plan
 import org.sheedon.mqtt.internal.connection.RealCall
 import org.sheedon.mqtt.internal.connection.RealPlan
-import org.sheedon.mqtt.internal.log
+import org.sheedon.mqtt.utils.Logger
 import kotlin.math.min
 
 /**
@@ -25,12 +25,12 @@ class PublishPlan(
         check(call is RealCall) { "call must RealCall in PublishPlan" }
 
         if (call.isCanceled()) {
-            log.info("Dispatcher", "publishPlan to cancel proceed by ${call.originalRequest}")
+            Logger.info("Dispatcher", "publishPlan to cancel proceed by ${call.originalRequest}")
             return
         }
 
         val request = call.originalRequest
-        log.info("Dispatcher", "publishPlan to proceed by $request")
+        Logger.info("Dispatcher", "publishPlan to proceed by $request")
 
         // 请求body 不能为空
         // 执行请求对象的核实/转换格式动作
@@ -75,7 +75,7 @@ class PublishPlan(
             token.waitForCompletion(min(timeout, DEFAULT_TIMEOUT))
             executed = true
         } catch (e: Exception) {
-            log.error("Dispatcher", "$request publish mqtt message fail:$e")
+            Logger.error("Dispatcher", "$request publish mqtt message fail:$e")
             unBind()
             callback?.onFailure(e)
         } finally {

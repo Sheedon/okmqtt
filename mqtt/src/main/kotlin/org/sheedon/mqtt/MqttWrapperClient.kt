@@ -714,7 +714,7 @@ class MqttWrapperClient private constructor(
             return
         }
 
-        // 执行真实的订阅一个主题集合
+        // dispatch a real unSubscription to a topic collection
         unsubscribeRealTopic(topics, listener)
     }
 

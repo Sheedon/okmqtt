@@ -20,7 +20,7 @@ import org.sheedon.mqtt.internal.IDispatchManager
 import org.sheedon.mqtt.internal.concurrent.NamedRunnable
 import org.sheedon.mqtt.internal.connection.responsibility.PublishPlan
 import org.sheedon.mqtt.internal.connection.responsibility.SubscribePlan
-import org.sheedon.mqtt.internal.log
+import org.sheedon.mqtt.utils.Logger
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -69,14 +69,14 @@ class RealCall(
         canceled = true
         // 未开始处理则结束，否则尝试停止请求调度
         if (!isExecuted()) {
-            log.info(
+            Logger.info(
                 "Dispatcher",
                 "The request not started by $originalRequest"
             )
             return
         }
 
-        log.info(
+        Logger.info(
             "Dispatcher",
             "The request cancel by $originalRequest"
         )
@@ -100,7 +100,7 @@ class RealCall(
 
         override fun execute() {
             if (isCanceled()) {
-                log.warning(
+                Logger.warning(
                     "Dispatcher",
                     "request is canceled by $originalRequest"
                 )
