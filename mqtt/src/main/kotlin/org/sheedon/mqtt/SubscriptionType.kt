@@ -1,16 +1,18 @@
 package org.sheedon.mqtt
 
 /**
- * 订阅类型
+ * The scope of the current [Topics].
+ *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2022/4/3 4:46 下午
  */
 enum class SubscriptionType {
 
-    // mqtt subscription + local subscription
+    // that means that the current [Topics] performs MQTT Topic subscription without subscribing,
+    // and associates the current [Topics] with the callback implementation.
     REMOTE,
 
-    // Single local subscription
+    // that just associated with callback, no need to subscribe to mqtt topic.
     LOCAL
 }
