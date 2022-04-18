@@ -2,8 +2,15 @@ package org.sheedon.mqtt
 
 /**
  * Topic header information, which records the configuration information of the currently subscribed topic
- * AttachRecord:need logged to the cache to facilitate subscription in case of reconnection,default false
- * SubscriptionType:「REMOTE - remote subscription」/「LOCAL - single local subscription」,default REMOTE
+ *
+ * AttachRecord:need logged to the cache to facilitate subscription in case of reconnection,
+ * default it is false,that don't log into the cache.
+ *
+ * SubscriptionType:The scope of the current [Topics], If [SubscriptionType.REMOTE] is used,
+ * that means that the current [Topics] performs MQTT Topic subscription without subscribing,
+ * and associates the current [Topics] with the callback implementation.
+ * If the type is [SubscriptionType.LOCAL], that just associated with callback, no need to subscribe to mqtt topic.
+ * The default is [SubscriptionType.REMOTE].
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -45,14 +52,29 @@ class Headers internal constructor(
         private var subscriptionType: SubscriptionType = SubscriptionType.REMOTE
 
         /**
-         * need logged to the cache to facilitate subscription in case of reconnection,default false
+         * Sets the attachRecord target of this topics.
+         *
+         * Whether to append to the cache record, if false,
+         * it means a single subscription, after clearing the behavior, it will not be restored.
+         *
+         * @param attachRecord
+         *            Whether to append to the cache record.
          */
         fun attachRecord(attachRecord: Boolean) = apply {
             this.attachRecord = attachRecord
         }
 
         /**
-         * 「REMOTE - remote subscription」/「LOCAL - single local subscription」,default REMOTE
+         * Sets the subscriptionType target of this topics.
+         *
+         * The scope of the current [Topics], If [SubscriptionType.REMOTE] is used, that means that
+         * the current [Topics] performs MQTT Topic subscription without subscribing, and associates
+         * the current [Topics] with the callback implementation. If the type is [SubscriptionType.LOCAL],
+         * that just associated with callback, no need to subscribe to mqtt topic.
+         * The default is [SubscriptionType.REMOTE].
+         *
+         * @param subscriptionType
+         *             Sets the scope of the current [Topics].
          */
         fun subscriptionType(subscriptionType: SubscriptionType) = apply {
             this.subscriptionType = subscriptionType

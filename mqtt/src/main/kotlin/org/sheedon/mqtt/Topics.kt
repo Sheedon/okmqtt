@@ -18,30 +18,43 @@ package org.sheedon.mqtt
 import androidx.annotation.IntRange
 
 /**
- * mqtt subscribes topic content
- * topic：mqtt topic，
- * qos：mqtt qos
- * userContext：MqttClient userContext
- * headers:Topic binding header information
+ * As part of an MQTT request or subscription data source,
+ * it is intended to configure the subscription topic associated as a feedback message.
+ *
+ * If the behavior of requesting or subscribing needs to be associated with the binding of
+ * a specific callback topic, and the topic has not yet been subscribed, the subscription will be
+ * implemented according to the [topic], [qos], [userContext] of the current class configuration.
+ * And the scope and storage of the current [Topics] are determined according to the configuration
+ * of [headers], see [Headers] for details.
+ *
+ * Use `new Topics.Builder()` to create a shared instance with custom settings:
+ *
+ * ```java
+ * // The Topics object.
+ * Topics topics = new Topics.Builder()
+ *     .addInterceptor(new HttpLoggingInterceptor())
+ *     .topic("AA/BB/CC",0)
+ *     .headers(false,SubscriptionType.REMOTE)
+ *     .build();
+ * ```
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/26 4:47 下午
  */
-class Topics(
+open class Topics @JvmOverloads constructor(
     @get:JvmName("topic") val topic: String,
     @get:JvmName("qos") val qos: Int = 0,
     @get:JvmName("userContext") val userContext: Any? = null,
     @get:JvmName("headers") val headers: Headers = Headers()
 ) {
 
-    fun convertKey(): String {
-        return "$topic$$qos"
-    }
 
     fun newBuilder(): Builder = Builder(this)
 
-
+    /**
+     * Indicates whether some other object is "equal to" this one.
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -66,18 +79,9 @@ class Topics(
 
 
     open class Builder {
-        // 主题
         internal var topic: String? = null
-
-        // 质量
         internal var qos: Int
-
-        // 用户上下文
         internal var userContext: Any? = null
-
-        // 主题所绑定的头部信息，
-        // 1. attachRecord:是否附加到缓存记录中，若false，则代表单次订阅，清空行为后，不恢复
-        // 2. subscriptionType:REMOTE - mqtt订阅和本地订阅，LOCAL - 单一本地订阅
         internal var headers = Headers.Builder()
 
         constructor() {
@@ -92,17 +96,32 @@ class Topics(
         }
 
         /**
-         * Sets the topic target of this topics.
+         * Sets the topic target of this topics, including topic, qos, userContext.
          *
-         * @throws IllegalArgumentException if [topic] is not a valid MQTT topic. Avoid this
-         *     exception by calling [MQTT topic.parse]; it returns null for invalid Topic.
+         * @param topic
+         *            the topic to subscribe to, which can include wildcards.
+         * @param qos
+         *            the maximum quality of service at which to subscribe.
+         *            Default value is 0.
+         * @param userContext
+         *            optional object used to pass context to the callback. Use null
+         *            if not required. Default value is null.
          */
-        open fun topic(topic: String) = apply {
+        @JvmOverloads
+        open fun topic(
+            topic: String,
+            @IntRange(from = 0, to = 2) qos: Int = 0,
+            userContext: Any? = null
+        ) = apply {
             this.topic = topic
+            this.qos(qos)
         }
 
         /**
          * Sets the qos target of this topics.
+         *
+         * @param qos
+         *            the maximum quality of service at which to subscribe.
          */
         open fun qos(@IntRange(from = 0, to = 2) qos: Int) = apply {
             this.qos = qos
@@ -110,16 +129,47 @@ class Topics(
 
         /**
          * Sets the userContext target of this topics.
+         *
+         * @param userContext
+         *            optional object used to pass context to the callback. Use null
+         *            if not required. Default value is null.
          */
         open fun userContext(userContext: Any?) = apply {
             this.userContext = userContext
         }
 
         /**
+         * Sets the scope and storage of the current [Topics] are determined according to the configuration
+         * of [headers].
+         *
+         * Whether to append to the cache record, if false,it means a single subscription,
+         * after clearing the behavior, it will not be restored.
+         * Set the subscription type. If [SubscriptionType.REMOTE] is used, it means mqtt+local is required.
+         * If the type is [SubscriptionType.LOCAL], it means a single local request.
+         * The default is [SubscriptionType.REMOTE]
+         *
+         * @param attachRecord
+         *            Whether to append to the cache record.
+         * @param subscriptionType
+         *            Sets the scope of the current [Topics].
+         */
+        @JvmOverloads
+        open fun headers(
+            attachRecord: Boolean = false,
+            subscriptionType: SubscriptionType = SubscriptionType.REMOTE
+        ) = apply {
+            this.attachRecord(attachRecord)
+            this.subscriptionType(subscriptionType)
+        }
+
+        /**
          * Sets the attachRecord target of this topics.
          *
          * Whether to append to the cache record, if false,
-         * it means a single subscription, after clearing the behavior, it will not be restored
+         * it means a single subscription, after clearing the behavior, it will not be restored.
+         *
+         * @param attachRecord
+         *            Whether to append to the cache record.
          */
         open fun attachRecord(attachRecord: Boolean) = apply {
             this.headers.attachRecord(attachRecord)
@@ -130,7 +180,10 @@ class Topics(
          *
          * Set the subscription type. If [SubscriptionType.REMOTE] is used, it means mqtt+local is required.
          * If the type is [SubscriptionType.LOCAL], it means a single local request.
-         * The default is [SubscriptionType.REMOTE]
+         * The default is [SubscriptionType.REMOTE].
+         *
+         * @param subscriptionType
+         *             Sets the scope of the current [Topics].
          */
         open fun subscriptionType(subscriptionType: SubscriptionType) = apply {
             this.headers.subscriptionType(subscriptionType)
@@ -146,12 +199,17 @@ class Topics(
         }
     }
 
+
     companion object {
+
+        /**
+         * A static method to easily build Topics.
+         */
         @JvmStatic
         @JvmOverloads
         fun build(
             topic: String,
-            qos: Int,
+            qos: Int = 0,
             attachRecord: Boolean = false,
             subscriptionType: SubscriptionType = SubscriptionType.REMOTE,
         ): Topics {
