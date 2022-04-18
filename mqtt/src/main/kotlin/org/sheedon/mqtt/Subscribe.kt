@@ -3,7 +3,21 @@ package org.sheedon.mqtt
 import java.util.ArrayList
 
 /**
- * Subscribe object, including content: "relations" is Relation of Array
+ * Subscribe object, including content: "relations" is Relation of Array.
+ *
+ * If more than one topic needs to be subscribed, and it cannot be subscribed through a topic with
+ * a wildcard, and the callback format is consistent, you can use [Subscribe] as the subscription object
+ * to subscribe to the mqtt topic.
+ *
+ * For example:
+ * Subscription object 1: AA/BB/CC .
+ * Subscription object 2: AA/DD/# .
+ * Subscription object 3: AA/EE/+ .
+ * But do not want to subscribe to AA directly, so the current subscription object can be used
+ * for implementation.
+ *
+ * #[Note] that the feedback format here needs to be consistent, and only one callback format can be
+ * specified for the same request subscription behavior.
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
