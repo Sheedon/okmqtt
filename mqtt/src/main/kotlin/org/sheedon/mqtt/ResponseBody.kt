@@ -18,14 +18,13 @@ package org.sheedon.mqtt
 import org.eclipse.paho.client.mqttv3.MqttMessage
 
 /**
- * Response message body Contains content,
- * "Subscription Topic" + "Message Content" + "Message Quality" (useless for the client) + "reserve" (useless for the client)
+ * This message is wrapped with the current class when a message arrives from the server.
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/30 11:13 上午
  */
-class ResponseBody internal constructor() : MqttMessage() {
+class ResponseBody private constructor() : MqttMessage() {
 
     var topic: String? = null
         private set
@@ -39,6 +38,9 @@ class ResponseBody internal constructor() : MqttMessage() {
             return field
         }
 
+    /**
+     * Constructor to create Response Body through「MQTT Topic」and「MqttMessage」
+     */
     constructor(topic: String, mqttMessage: MqttMessage) : this() {
         this.topic = topic
         super.setPayload(mqttMessage.payload)

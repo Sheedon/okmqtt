@@ -17,13 +17,13 @@ package org.sheedon.mqtt
 
 
 /**
- * Basic feedback class, the content to be included includes "feedback subject" and "feedback message body"
+ * Basic callback class, the content to be included "callback keyword" and "callback message body".
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
  * @Date: 2022/1/30 11:01 上午
  */
 class Response @JvmOverloads constructor(
-    val backTopic: String? = "",
+    val keyword: String? = "",
     val body: ResponseBody? = null
 )
