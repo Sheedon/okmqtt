@@ -35,9 +35,6 @@ class PublishPlan(
         // 请求body 不能为空
         // 执行请求对象的核实/转换格式动作
         var body: RequestBody = request.body
-            ?: throw IllegalArgumentException(
-                "request's body is null by $request"
-            )
 
         val dispatcher = call.dispatcher
         val requestHandler = dispatcher.requestHandler()

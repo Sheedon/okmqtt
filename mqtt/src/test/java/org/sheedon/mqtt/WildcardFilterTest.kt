@@ -2,6 +2,7 @@ package org.sheedon.mqtt
 
 import org.junit.Assert
 import org.junit.Test
+import org.sheedon.mqtt.internal.WildcardFilter
 
 /**
  * java类作用描述
@@ -9,9 +10,9 @@ import org.junit.Test
  * @Email: sheedonsun@163.com
  * @Date: 2022/4/7 6:18 下午
  */
-class WildcardFillerTest {
+class WildcardFilterTest {
 
-    private val filler = WildcardFiller()
+    private val filler = WildcardFilter()
 
     @Test
     fun subscribe() {

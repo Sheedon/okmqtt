@@ -66,7 +66,7 @@ class DispatcherTest {
             .topics("test_back", attachRecord = true)
             .build()
 
-        testTopic = request.body?.topic
+        testTopic = request.body.topic
         testMessage = request.body
 
         return request

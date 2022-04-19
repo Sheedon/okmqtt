@@ -36,7 +36,7 @@ internal class MqttRequestHandler internal constructor(
      */
     override fun checkRequestData(data: RequestBody): RequestBody {
         if (data.autoEncode && charsetName.isNotEmpty()) {
-            data.payload = data.data.toByteArray(Charset.forName(charsetName))
+            data.payload = data.data?.toByteArray(Charset.forName(charsetName)) ?: byteArrayOf()
         }
 
         Logger.info("checkRequestData (data is $data)")
