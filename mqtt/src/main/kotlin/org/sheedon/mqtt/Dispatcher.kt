@@ -20,11 +20,12 @@ import org.sheedon.rr.timeout.DelayEvent.Companion.build
 import org.sheedon.rr.timeout.OnTimeOutListener
 import org.sheedon.rr.timeout.android.TimeOutHandler
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeoutException
 
 
 /**
- * 事件处理池，用于管理未完成的请求响应记录
+ * Policy on manage outstanding requests
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com

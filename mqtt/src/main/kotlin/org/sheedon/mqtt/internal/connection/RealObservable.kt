@@ -118,7 +118,7 @@ class RealObservable private constructor(
      * 单条订阅
      * */
     override fun request(): Request {
-        return originalRequest ?: Request(Relation.Builder().build(), null)
+        return originalRequest ?: Request(Relation.Builder().build(), RequestBody(""))
     }
 
     /**

@@ -37,14 +37,14 @@ interface Call : Listen {
     fun enqueue(callback: Callback?)
 
     /**
-     * 获取请求数据
+     * get request information
      *
      * @return Request 请求信息
      */
     fun request(): Request
 
     /**
-     * 请求提交，标志着这个请求无需监听反馈
+     * The request is submitted, indicating that the request does not need to monitor feedback
      */
     fun publish()
 }

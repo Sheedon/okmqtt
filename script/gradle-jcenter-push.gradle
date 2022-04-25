@@ -1,0 +1,60 @@
+apply plugin: 'maven-publish'
+
+group = POM_GROUP_ID
+version = VERSION_NAME
+
+afterEvaluate {
+    publishing {
+        publications {
+            maven(MavenPublication) {
+
+                pom{
+                    groupId = POM_GROUP_ID
+                    artifactId = POM_ARTIFACT_ID
+                    version = VERSION_NAME + POM_PACKAGING
+                }
+
+                if (project.hasProperty("android")) { // Android libraries
+                    from components.release
+                    artifact androidSourcesJar
+                    task sourcesJar(type: Jar) {
+                        classifier = 'sources'
+                        from android.sourceSets.main.kotlin.srcDirs
+                    }
+
+                    task javadoc(type: Javadoc) {
+                        failOnError false
+                        source = android.sourceSets.main.kotlin.srcDirs
+                        options {
+                            links "http://docs.oracle.com/javase/7/docs/api/"
+                            linksOffline "http://d.android.com/reference", "${android.sdkDirectory}/docs/reference"
+                        }
+                        classpath += project.android.libraryVariants.toList().first().javaCompile.classpath
+                        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+                    }
+                } else { // Java libraries
+                    from components.java
+                    task sourcesJar(type: Jar) {
+                        classifier = 'sources'
+                        from sourceSets.main.java.srcDirs
+                    }
+                }
+
+                task javadocJar(type: Jar, dependsOn: javadoc) {
+                    classifier = 'javadoc'
+                    from javadoc.destinationDir
+                }
+
+                artifacts {
+                    archives javadocJar
+                    archives sourcesJar
+                }
+            }
+        }
+    }
+}
+
+task androidSourcesJar(type: Jar) {
+    archiveClassifier.set('sources')
+    from android.sourceSets.main.java.srcDirs
+}
