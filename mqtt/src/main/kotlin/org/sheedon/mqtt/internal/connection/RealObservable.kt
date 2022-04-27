@@ -57,7 +57,7 @@ class RealObservable private constructor(
      * @param callback 结果响应，[callback.onFailure] 调度失败的结果反馈，
      * [callback.onResponse] 消息正常响应
      */
-    override fun enqueue(callback: Callback) {
+    override fun enqueue(callback: ObservableBack) {
         isSubscribe = true
         enqueueReal(callback)
     }

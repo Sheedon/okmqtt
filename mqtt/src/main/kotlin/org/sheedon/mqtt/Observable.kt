@@ -31,7 +31,7 @@ interface Observable : Listen {
      *
      * @param callback Callback
      */
-    fun enqueue(callback: Callback)
+    fun enqueue(callback: ObservableBack)
 
     /**
      * Use the SubscribeCallback in the protocol
