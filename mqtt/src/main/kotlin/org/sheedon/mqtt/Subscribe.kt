@@ -35,6 +35,16 @@ class Subscribe internal constructor(
         return builder
     }
 
+    fun getTopicArray(): Pair<Array<String>, IntArray> {
+        val topicArray = arrayListOf<String>()
+        val qosArray = arrayListOf<Int>()
+        relations.forEach {
+            topicArray.add(it.topics?.topic ?: "")
+            qosArray.add(it.topics?.qos ?: 0)
+        }
+        return Pair(topicArray.toTypedArray(), qosArray.toIntArray())
+    }
+
     class Builder {
         val relations: MutableList<Relation> = ArrayList()
 

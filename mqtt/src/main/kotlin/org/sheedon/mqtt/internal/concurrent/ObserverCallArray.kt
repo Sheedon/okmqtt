@@ -380,13 +380,12 @@ class ObserverCallArray {
     ) {
         // 从集合中取得队列
         val queue = findQueue(topic)
-        // 队列中推出第一项ID
-        val task = queue.poll() ?: return
-
-        // 完全匹配的反馈
-        val callback = task.back
-        if (callback is ObservableBack) {
-            callback.onResponse(task.listen as Observable, response)
+        queue.forEach { task ->
+            // 完全匹配的反馈
+            val callback = task.back
+            if (callback is ObservableBack) {
+                callback.onResponse(task.listen as Observable, response)
+            }
         }
     }
 

@@ -41,8 +41,9 @@ class PublishPlan(
         body = requestHandler.checkRequestData(body)
 
         val relation = request.relation
+
         // 需要有绑定内容
-        if (relation.keyword.isNullOrEmpty() && relation.topics?.topic.isNullOrEmpty()) {
+        if (call.callback != null && relation.keyword.isNullOrEmpty() && relation.topics?.topic.isNullOrEmpty()) {
             throw IllegalArgumentException(
                 "request's relation bind topic or keyword is null by $request"
             )
