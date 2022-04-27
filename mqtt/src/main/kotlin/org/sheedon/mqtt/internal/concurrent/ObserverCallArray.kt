@@ -380,6 +380,7 @@ class ObserverCallArray {
     ) {
         // 从集合中取得队列
         val queue = findQueue(topic)
+        // 遍历完全匹配的监听者，依次执行响应
         queue.forEach { task ->
             // 完全匹配的反馈
             val callback = task.back
