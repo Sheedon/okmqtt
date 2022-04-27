@@ -2,10 +2,8 @@ package org.sheedon.mqtt.internal.connection.responsibility
 
 import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttToken
-import org.sheedon.mqtt.Callback
-import org.sheedon.mqtt.Relation
-import org.sheedon.mqtt.SubscribeBack
-import org.sheedon.mqtt.SubscriptionType
+import org.eclipse.paho.client.mqttv3.internal.wire.MqttSubscribe
+import org.sheedon.mqtt.*
 import org.sheedon.mqtt.internal.IDispatchManager
 import org.sheedon.mqtt.internal.connection.*
 import org.sheedon.mqtt.utils.Logger
@@ -147,11 +145,16 @@ class UnSubscribePlan(
         if (call is RealObservable) {
             val callback = call.back
             if (callback is SubscribeBack) {
-                callback.onResponse(asyncActionToken?.response)
+                val (topicArray, qosArray) = call.originalSubscribe?.getTopicArray() ?: Pair(
+                    arrayOf(),
+                    intArrayOf()
+                )
+
+                callback.onResponse(MqttSubscribe(topicArray, qosArray))
             }
 
             // 无需结果反馈，则不需要执行下一步
-            if (callback !is Callback) {
+            if (callback !is Callback && callback !is ObservableBack) {
                 return
             }
         }
