@@ -1,9 +1,7 @@
 package org.sheedon.mqtt.internal.concurrent
 
 import org.sheedon.mqtt.*
-import org.sheedon.mqtt.internal.connection.Listen
 import org.sheedon.mqtt.internal.connection.RealCall
-import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * 请求的呼叫集合
@@ -15,16 +13,10 @@ internal class RequestCallArray {
 
 
     // 主题队列池，反馈主题为键，同样的反馈主题的内容，依次存入有序队列中
-    private val topicCalls = LinkedHashMap<String, ConcurrentLinkedQueue<Long>>()
+    private val topicCalls = LinkedHashMap<String, RequestNode>()
 
     // topic 任务锁
     private val topicLock = Any()
-
-    // 关键字队列，关键字为键,同样的反馈主题的内容，依次存入有序队列中
-    private val keywordCalls = LinkedHashMap<String, ConcurrentLinkedQueue<Long>>()
-
-    // keyword 任务锁
-    private val keywordLock = Any()
 
     /**
      * 1.将请求消息-以「主题/关键字」为键，由loadId()生产消息ID，存入topicCalls/keywordCalls中，
@@ -39,8 +31,9 @@ internal class RequestCallArray {
     fun subscribe(
         call: Call,
         back: IBack,
-        loadId: () -> Long
-    ): Pair<Long, ReadyTask> {
+        loadId: () -> Long,
+        offerReadyCalls: (Long, ReadyTask) -> Unit
+    ): Long {
         // 获取消息ID
         val id = loadId()
         // 创建就绪的任务
@@ -49,68 +42,52 @@ internal class RequestCallArray {
         val request = call.request()
         val relation = request.relation
 
-        // 关键字不存在，则说明必然是订阅主题消息
+        // 从Relation中获取mqtt主题
+        val topic = getTopic(relation.topics?.topic)
+        // 得到关键字
         val keyword = relation.keyword
-        if (keyword.isNullOrEmpty()) {
 
-            val subscribe = relation.topics
-            check(subscribe != null) { "please add subscribe by $relation" }
+        // 订阅主题和关键字
+        subscribeTopicAndKeyword(topic, keyword, readyTask)
 
-            val queue = getQueueByTopic(subscribe.topic)
-            queue.offer(id)
-            return Pair(id, readyTask)
-        }
-
-        val queue = getQueueByKeyword(keyword)
-        queue.offer(id)
-        return Pair(id, readyTask)
+        offerReadyCalls(id, readyTask)
+        return id
     }
 
     /**
-     * 根据主题获取keywordCalls的队列，双重加锁，若队列存在直接返回，不存在则创建后返回
+     * 订阅主题和关键字，将订阅主题为键，并且构造出订阅节点对象，将订阅内容和keyword所绑定内容存入其中
      *
      * @param topic 主题
-     * @return topicCalls 队列
-     */
-    private fun getQueueByTopic(topic: String): ConcurrentLinkedQueue<Long> {
-        return getQueue(topic, topicCalls, topicLock)
-    }
-
-    /**
-     * 根据关键字获取 keywordCalls 的队列，双重加锁，若队列存在直接返回，不存在则创建后返回
-     *
      * @param keyword 关键字
-     * @return keywordCalls 队列
+     * @param readyTask 就绪的任务
      */
-    private fun getQueueByKeyword(keyword: String): ConcurrentLinkedQueue<Long> {
-        return getQueue(keyword, keywordCalls, keywordLock)
+    private fun subscribeTopicAndKeyword(topic: String, keyword: String?, readyTask: ReadyTask) {
+        val node = getQueueByTopic(topic)
+        node.offer(keyword, readyTask)
     }
 
     /**
-     * 根据key获取 keyCalls 的消息ID队列，双重加锁，若队列存在直接返回，不存在则创建后返回
+     * 取消订阅，根据传入的 关联项，核实该消息是 通过「主题/关键字」订阅，
+     * 从对应 topicCalls / keywordCalls 中移除消息ID
      *
-     * @param key 关键字
-     * @param targetCalls 目标集合
-     * @param lock 锁
-     *
-     * @return 目标队列
+     * @param task 就绪的任务
      */
-    private fun getQueue(
-        key: String,
-        targetCalls: LinkedHashMap<String, ConcurrentLinkedQueue<Long>>,
-        lock: Any
-    ): ConcurrentLinkedQueue<Long> {
-        var queue = targetCalls[key]
-        if (queue == null) {
-            synchronized(lock) {
-                queue = targetCalls[key]
-                if (queue == null) {
-                    queue = ConcurrentLinkedQueue()
-                    targetCalls[key] = queue!!
-                }
-            }
+    fun unsubscribe(task: ReadyTask) {
+        val listen = task.listen
+        if (listen !is RealCall) {
+            return
         }
-        return queue!!
+
+        // 请求对象的关联信息
+        val relation = listen.originalRequest.relation
+
+        // 从Relation中获取mqtt主题
+        val topic = getTopic(relation.topics?.topic)
+        // 得到关键字
+        val keyword = relation.keyword
+
+        val node = getQueueByTopic(topic)
+        node.poll(keyword, task)
     }
 
     /**
@@ -121,50 +98,20 @@ internal class RequestCallArray {
      *
      * @param keyword 关键字
      * @param responseBody 响应内容
-     * @param pollTaskById 根据ID获取任务的方法
-     * @param callResponse 反馈响应结果的方法
      */
     fun callResponse(
         keyword: String?,
         responseBody: ResponseBody,
-        pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (IBack?, Call, Response) -> Unit
+        pollTaskById: (Long) -> ReadyTask?
     ) {
 
         val response = Response(keyword, responseBody)
 
-        // 响应关键字的反馈
-        callResponseByKeyword(keyword, response, pollTaskById, callResponse)
+        // 取得订阅主题
+        val topic = getTopic(responseBody.topic)
 
         // 响应主题的反馈
-        callResponseByTopic(responseBody.topic, response, pollTaskById, callResponse)
-    }
-
-    /**
-     * 通过关键字来反馈响应结果
-     * 1.从关键字集合中取得队列
-     * 2.队列中推出第一项
-     * 3.推出当前ID的就绪任务
-     * 4.处理反馈操作
-     *
-     * @param keyword 关键字
-     * @param response 响应内容
-     * @param pollTaskById 根据ID获取任务的方法
-     * @param callResponse 反馈响应结果的方法
-     */
-    private fun callResponseByKeyword(
-        keyword: String?,
-        response: Response,
-        pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (IBack?, Call, Response) -> Unit
-    ) {
-        // 关键字为空，则无需接下来操作
-        if (keyword.isNullOrEmpty()) {
-            return
-        }
-
-        // 查找关键字并且反馈响应结果
-        findAndCallResponse(keyword, response, pollTaskById, callResponse, ::getQueueByKeyword)
+        callResponseByTopic(topic, keyword, response, pollTaskById)
     }
 
     /**
@@ -175,23 +122,17 @@ internal class RequestCallArray {
      * 4.处理反馈操作
      *
      * @param topic 主题
+     * @param keyword 关键字
      * @param response 响应内容
-     * @param pollTaskById 根据ID获取任务的方法
-     * @param callResponse 反馈响应结果的方法
      */
     private fun callResponseByTopic(
-        topic: String?,
+        topic: String,
+        keyword: String?,
         response: Response,
-        pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (IBack?, Call, Response) -> Unit
+        pollTaskById: (Long) -> ReadyTask?
     ) {
-        // 关键字为空，则无需接下来操作
-        if (topic.isNullOrEmpty()) {
-            return
-        }
-
         // 标准完全匹配的通配符查找并且反馈响应结果
-        findAndCallResponse(topic, response, pollTaskById, callResponse, ::getQueueByTopic)
+        findAndCallResponse(topic, keyword, response, pollTaskById)
 
         // 订阅信息带通配符的反馈
         val lastIndex = topic.lastIndexOf(SLASH)
@@ -202,9 +143,9 @@ internal class RequestCallArray {
         }
 
         // 反馈通配符+
-        callResponseByPlus(fullTopic, lastIndex, response, pollTaskById, callResponse)
+        callResponseByPlus(fullTopic, lastIndex, keyword, response, pollTaskById)
         // 反馈通配符#
-        callResponseBySign(fullTopic, lastIndex, response, pollTaskById, callResponse)
+        callResponseBySign(fullTopic, lastIndex, keyword, response, pollTaskById)
 
     }
 
@@ -221,16 +162,16 @@ internal class RequestCallArray {
     private fun callResponseByPlus(
         topic: String,
         index: Int,
+        keyword: String?,
         response: Response,
-        pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (IBack?, Call, Response) -> Unit
+        pollTaskById: (Long) -> ReadyTask?
     ) {
         if (index == -1) {
-            findAndCallResponse(PLUS, response, pollTaskById, callResponse, ::getQueueByTopic)
+            findAndCallResponse(PLUS, keyword, response, pollTaskById)
             return
         }
 
-        findAndCallResponse("$topic/$PLUS", response, pollTaskById, callResponse, ::getQueueByTopic)
+        findAndCallResponse("$topic/$PLUS", keyword, response, pollTaskById)
     }
 
     /**
@@ -246,16 +187,16 @@ internal class RequestCallArray {
     private fun callResponseBySign(
         topic: String,
         index: Int,
+        keyword: String?,
         response: Response,
-        pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (IBack?, Call, Response) -> Unit
+        pollTaskById: (Long) -> ReadyTask?
     ) {
         if (index == -1) {
-            findAndCallResponse(SIGN, response, pollTaskById, callResponse, ::getQueueByTopic)
+            findAndCallResponse(SIGN, keyword, response, pollTaskById)
             return
         }
 
-        findAndCallResponse("$topic/$SIGN", response, pollTaskById, callResponse, ::getQueueByTopic)
+        findAndCallResponse("$topic/$SIGN", keyword, response, pollTaskById)
 
         val lastIndex = topic.lastIndexOf(SLASH)
         val fullTopic = if (lastIndex == -1) {
@@ -265,59 +206,65 @@ internal class RequestCallArray {
         }
 
         // 递归处理 反馈响应结果带通配符#
-        callResponseBySign(fullTopic, lastIndex, response, pollTaskById, callResponse)
+        callResponseBySign(fullTopic, lastIndex, keyword, response, pollTaskById)
     }
 
 
     /**
      * 查找关键字并且反馈响应结果
-     *
+     * 若该节点未订阅过，则节点为空，不需要反馈响应
      */
     private fun findAndCallResponse(
         topic: String,
+        keyword: String?,
         response: Response,
-        pollTaskById: (Long) -> ReadyTask?,
-        callResponse: (IBack?, Call, Response) -> Unit,
-        findQueue: (String) -> ConcurrentLinkedQueue<Long>
+        pollTaskById: (Long) -> ReadyTask?
     ) {
-        // 从集合中取得队列
-        val queue = findQueue(topic)
-        // 队列中推出第一项ID
-        val id = queue.poll() ?: return
-        // 推出当前ID的就绪任务
-        val task = pollTaskById(id) ?: return
-
-
-        // 完全匹配的反馈
-        callResponse(task.back, task.listen as Call, response)
+        // 找到主题所对应的请求节点
+        val node = getNodeByTopic(topic)
+        node?.callResponse(keyword, response, pollTaskById)
     }
 
     /**
-     * 取消订阅，根据传入的 关联项，核实该消息是 通过「主题/关键字」订阅，
-     * 从对应 topicCalls / keywordCalls 中移除消息ID
-     *
-     * @param listen 监听者，通过 Listen 获取RealCall中「请求数据」的relation
+     * 传入一个主题，若主题不存在，则取[ROOT_OBSERVER]作为主题返回
+     * @param topic mqtt订阅主题
      */
-    fun unsubscribe(listen: Listen) {
-        if (listen !is RealCall) {
-            return
+    private fun getTopic(topic: String?): String {
+        return topic ?: ROOT_OBSERVER
+    }
+
+    /**
+     * 根据主题获取keywordCalls的队列，双重加锁，若队列存在直接返回，不存在则创建后返回
+     *
+     * @param topic 主题
+     * @return RequestNode 请求节点
+     */
+    private fun getQueueByTopic(topic: String): RequestNode {
+        var queue = topicCalls[topic]
+        if (queue == null) {
+            synchronized(topicLock) {
+                queue = topicCalls[topic]
+                if (queue == null) {
+                    queue = RequestNode()
+                    topicCalls[topic] = queue!!
+                }
+            }
         }
+        return queue!!
+    }
 
-        // 请求对象的关联信息
-        val relation = listen.originalRequest.relation
-        val keyword = relation.keyword
-        // 关键字不存在，则说明必然是订阅主题消息
-        if (keyword.isNullOrEmpty()) {
-
-            val subscribe = relation.topics
-            check(subscribe != null) { "please add subscribe by $relation" }
-
-            val queue = getQueueByTopic(subscribe.topic)
-            queue.poll()
-            return
-        }
-        val queue = getQueueByKeyword(keyword)
-        queue.poll()
+    /**
+     * 根据主题获取keywordCalls的队列，双重加锁，若队列存在直接返回，不存在返回null
+     *
+     * @param topic 主题
+     * @return RequestNode 请求节点
+     */
+    private fun getNodeByTopic(topic: String): RequestNode? {
+        val queue = topicCalls[topic]
+            ?: synchronized(topicLock) {
+                return topicCalls[topic]
+            }
+        return queue
     }
 
     /**
@@ -325,7 +272,6 @@ internal class RequestCallArray {
      */
     fun clear() {
         topicCalls.clear()
-        keywordCalls.clear()
     }
 
     companion object {
