@@ -63,10 +63,6 @@ class Relation private constructor(
         internal var keyword: String? = null
         internal var timeout: Long? = null
 
-        // Whether to add binding behavior, subscribe topic keywords, the current version can only choose one
-        internal var getSubscribe = false
-        internal var getKeyWork = false
-
         /**
          * Sets mqtt topic used to match the response topic.
          *
@@ -75,10 +71,6 @@ class Relation private constructor(
          */
         @Throws(IllegalStateException::class)
         open fun topics(topics: Topics) = apply {
-            this.getSubscribe = true
-            if (getKeyWork) {
-                throw IllegalStateException("Only one of them can be selected keyword and topics")
-            }
             this.topics = topics
         }
 
@@ -91,10 +83,6 @@ class Relation private constructor(
          * @param keyword the keyword of the response message
          */
         open fun keyword(keyword: String) = apply {
-            this.getKeyWork = true
-            if (getSubscribe) {
-                throw IllegalStateException("Only one of them can be selected keyword and topics")
-            }
             this.keyword = keyword
         }
 
