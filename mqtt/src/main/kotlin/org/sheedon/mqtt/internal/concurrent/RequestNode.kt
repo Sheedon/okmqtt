@@ -119,8 +119,9 @@ class RequestNode {
         response: Response,
         pollTaskById: (Long) -> ReadyTask?
     ) {
-        if (keyword?.isNotEmpty() == true) {
-            callResponseByKeyword(keyword, response, pollTaskById)
+        if (keyword?.isNotEmpty() == true
+            && callResponseByKeyword(keyword, response, pollTaskById)
+        ) {
             return
         }
 
@@ -145,22 +146,24 @@ class RequestNode {
      *
      * @param keyword 关键字
      * @param response 响应内容
+     * @return true：已响应，false：未响应结果
      */
     private fun callResponseByKeyword(
         keyword: String,
         response: Response,
         pollTaskById: (Long) -> ReadyTask?
-    ) {
+    ): Boolean {
         // 查找关键字并且反馈响应结果
         val queue = getQueueByKeyword(keyword)
         // 推出就绪任务
-        var task = queue.poll() ?: return
+        var task = queue.poll() ?: return false
         // 推出超时的当前ID的就绪任务
-        task = pollTaskById(task.id) ?: return
+        task = pollTaskById(task.id) ?: return false
 
         val callback = task.back
         if (callback is Callback) {
             callback.onResponse(task.listen as Call, response)
         }
+        return true
     }
 }
