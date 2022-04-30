@@ -78,7 +78,11 @@ class Relation private constructor(
          * Sets the keyword of the response message
          *
          * If the field is not "", it means that the correlation field is used as the matching field
-         * of the response message for correlation; otherwise, the subscription topic in the relation is taken
+         * of the response message for correlation; otherwise, the subscription topic in the relation is taken.
+         *
+         * Note: It is hoped that in the case of subscribing to the same topic, the short-term
+         * request will use the topic uniformly, or use the keyword instead of mixing
+         * (sometimes there is no keyword). In this case, there is a response error.
          *
          * @param keyword the keyword of the response message
          */
