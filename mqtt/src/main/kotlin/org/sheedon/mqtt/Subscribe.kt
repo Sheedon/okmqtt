@@ -53,7 +53,9 @@ class Subscribe internal constructor(
          *
          * @param topic if [topic] is not a valid MQTT topic. Avoid this
          *     exception by calling [MQTT topic.parse]; it returns null for invalid Topic.
-         * @param keyword keyword under subscription
+         * @param keyword keyword under subscription. It is hoped that in the case of subscribing to
+         * the same topic, the short-term request will use the topic uniformly, or use the keyword
+         * instead of mixing (sometimes there is no keyword). In this case, there is a response error.
          * @param qos Sets the qos target of this topics.
          * @param attachRecord Whether to append to the cache record, if false,
          * it means a single subscription, after clearing the behavior, it will not be restored
