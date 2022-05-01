@@ -47,10 +47,10 @@ class RealCall(
     override fun enqueue(callback: Callback?) {
         check(executed.compareAndSet(false, true))
 
-        this.callback = callback
+        this.callback = callback?.let { CallbackProxy(it) }
 
         val eventBehavior = this.dispatcher.eventBehavior()
-        eventBehavior.enqueueRequestEvent(AsyncCall(callback))
+        eventBehavior.enqueueRequestEvent(AsyncCall(this.callback))
     }
 
     override fun publish() {
@@ -120,6 +120,20 @@ class RealCall(
 
             // 流程调度
             planChain?.proceed()
+        }
+
+    }
+
+
+    private inner class CallbackProxy(val callback: Callback) : Callback {
+        override fun onResponse(call: Call, response: Response) {
+            callback.onResponse(call, response)
+            planChain?.cancel()
+        }
+
+        override fun onFailure(e: Throwable?) {
+            callback.onFailure(e)
+            planChain?.cancel()
         }
 
     }
