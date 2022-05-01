@@ -80,6 +80,7 @@ class ObservableNote @JvmOverloads constructor(
     fun decrement(): Int {
         val countNum = count.decrementAndGet()
         if (countNum <= 0) {
+            count.set(0)
             currentTopic = null
         }
         return if (countNum < 0) return 0 else countNum
