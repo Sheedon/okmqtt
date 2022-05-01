@@ -7,7 +7,6 @@ import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.sheedon.mqtt.*
 import org.sheedon.mqtt.internal.DataConverter
 import org.sheedon.mqtt.internal.binder.IBindHandler
-import org.sheedon.mqtt.internal.binder.IResponseHandler
 import org.sheedon.mqtt.internal.concurrent.CallbackEnum
 import org.sheedon.mqtt.internal.concurrent.ObserverCallArray
 import org.sheedon.mqtt.internal.concurrent.ReadyTask
@@ -51,7 +50,7 @@ import java.util.concurrent.TimeoutException
 internal class Dispatcher(
     private val convertArray: ArrayList<DataConverter<ResponseBody, String>>,
     private val defaultTimeout: Long // 默认超时时间
-) : IBindHandler, IResponseHandler {
+) : IBindHandler {
 
     // 以请求ID为键，以请求任务为值的请求数据池
     private val readyCalls = ConcurrentHashMap<Long, ReadyTask>()
@@ -174,7 +173,7 @@ internal class Dispatcher(
     /**
      * 反馈mqtt结果
      */
-    override fun callResponse(topic: String, message: MqttMessage) {
+    fun callResponse(topic: String, message: MqttMessage) {
         val responseBody = ResponseBody(topic, message)
         val keyword = responseBody.run {
             convertArray.forEach {

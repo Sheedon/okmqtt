@@ -13,4 +13,6 @@ import org.eclipse.paho.client.mqttv3.MqttMessage
 interface IResponseHandler {
 
     fun callResponse(topic: String, message: MqttMessage)
+
+    fun callTask(runnable: () -> Unit)
 }

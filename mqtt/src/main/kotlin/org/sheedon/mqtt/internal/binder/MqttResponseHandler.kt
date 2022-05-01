@@ -27,4 +27,10 @@ internal class MqttResponseHandler internal constructor(
             dispatcher.callResponse(topic, message)
         }
     }
+
+    override fun callTask(runnable: () -> Unit) {
+        eventBehavior.enqueueCallbackEvent {
+            runnable()
+        }
+    }
 }
