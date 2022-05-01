@@ -76,8 +76,10 @@ class RequestNode {
             return
         }
 
-        taskPools.remove(task)
-        empty.decrementAndGet()
+        // 从中移除，必然需要有数据
+        empty.takeIf {
+            taskPools.isNotEmpty() && taskPools.remove(task)
+        }?.decrementAndGet()
     }
 
     /**
@@ -86,8 +88,11 @@ class RequestNode {
      */
     private fun pollKeyword(keyword: String, task: ReadyTask?) {
         val queue = getQueueByKeyword(keyword)
-        queue.remove(task)
-        empty.decrementAndGet()
+
+        // 从中移除，必然需要有数据
+        empty.takeIf {
+            queue.isNotEmpty() && queue.remove(task)
+        }?.decrementAndGet()
     }
 
     /**
@@ -127,6 +132,8 @@ class RequestNode {
 
         // 推出就绪任务
         var task = taskPools.poll() ?: return
+        // 成功推出后，empty-1
+        empty.decrementAndGet()
         // 推出超时的当前ID的就绪任务
         task = pollTaskById(task.id) ?: return
 
@@ -157,6 +164,8 @@ class RequestNode {
         val queue = getQueueByKeyword(keyword)
         // 推出就绪任务
         var task = queue.poll() ?: return false
+        // 成功推出后，empty-1
+        empty.decrementAndGet()
         // 推出超时的当前ID的就绪任务
         task = pollTaskById(task.id) ?: return false
 
