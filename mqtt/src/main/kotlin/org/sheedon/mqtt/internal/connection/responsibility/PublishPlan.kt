@@ -19,6 +19,7 @@ class PublishPlan(
 ) : RealPlan(call, nextPlan) {
 
     private var executed = false
+    private var canceled = false
     private var publishId: Long? = null
 
     override fun proceed() {
@@ -104,6 +105,11 @@ class PublishPlan(
         if (call.callback == null) {
             return
         }
+
+        if(canceled){
+            return
+        }
+        canceled = true
 
         val dispatcher = call.dispatcher
 

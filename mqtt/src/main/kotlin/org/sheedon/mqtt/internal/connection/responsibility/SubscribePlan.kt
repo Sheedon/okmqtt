@@ -21,6 +21,7 @@ class SubscribePlan(
 
     // 是否完成订阅
     private var subscribed = false
+    private var canceled = false
 
 
     /**
@@ -221,6 +222,9 @@ class SubscribePlan(
      * unSubscribeByRealObservable：对 RealObservable 取消订阅
      */
     private fun unSubscribe() {
+        if (canceled) return
+        canceled = true
+
         if (call is RealCall) {
             unSubscribeByRealCall(call)
         } else if (call is RealObservable) {

@@ -21,6 +21,7 @@ class UnSubscribePlan(
 
     // 是否完成取消订阅
     private var unSubscribed = false
+    private var canceled = false
 
 
     /**
@@ -178,6 +179,11 @@ class UnSubscribePlan(
      * @param observable 真实的观察者对象，将内部的request/subscribe订阅
      * */
     private fun subscribe() {
+        if (canceled) {
+            return
+        }
+        canceled = true
+
         val observable = call as RealObservable
 
         // request 取消订阅行为

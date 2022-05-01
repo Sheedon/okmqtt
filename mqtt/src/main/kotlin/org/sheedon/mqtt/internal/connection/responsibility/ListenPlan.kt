@@ -17,6 +17,7 @@ class ListenPlan(
 ) : RealPlan(call, nextPlan) {
 
     private var executed = false
+    private var canceled = false
     private var publishIds = ArrayList<Long>()
 
     override fun proceed() {
@@ -113,6 +114,11 @@ class ListenPlan(
         if (call.back == null) {
             return
         }
+
+        if (canceled) {
+            return
+        }
+        canceled = true
 
         val dispatcher = call.dispatcher
         val bindHandler = dispatcher.bindHandler()
