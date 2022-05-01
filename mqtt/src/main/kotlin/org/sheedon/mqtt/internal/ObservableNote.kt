@@ -124,7 +124,7 @@ class ObservableNote @JvmOverloads constructor(
         if (name == "#" || name == "+") {
             return false
         }
-        return childNotes.isEmpty()
+        return childNotes.isNotEmpty()
     }
 
     /**
@@ -158,7 +158,12 @@ class ObservableNote @JvmOverloads constructor(
      * 停用节点
      */
     fun disableStatus() {
-        status = NoteStatus.DISABLE
+        val count = getCount()
+        status = if (count == 0) {
+            NoteStatus.EMPTY
+        } else {
+            NoteStatus.DISABLE
+        }
     }
 
     /**
