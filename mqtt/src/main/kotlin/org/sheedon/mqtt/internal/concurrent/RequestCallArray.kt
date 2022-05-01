@@ -1,6 +1,10 @@
 package org.sheedon.mqtt.internal.concurrent
 
 import org.sheedon.mqtt.*
+import org.sheedon.mqtt.internal.Contract.PLUS
+import org.sheedon.mqtt.internal.Contract.ROOT_OBSERVER
+import org.sheedon.mqtt.internal.Contract.SIGN
+import org.sheedon.mqtt.internal.Contract.SLASH
 import org.sheedon.mqtt.internal.connection.RealCall
 
 /**
@@ -110,27 +114,6 @@ internal class RequestCallArray {
         // 取得订阅主题
         val topic = getTopic(responseBody.topic)
 
-        // 响应主题的反馈
-        callResponseByTopic(topic, keyword, response, pollTaskById)
-    }
-
-    /**
-     * 通过主题来反馈响应结果
-     * 1.从主题集合中取得队列
-     * 2.队列中推出第一项
-     * 3.推出当前ID的就绪任务
-     * 4.处理反馈操作
-     *
-     * @param topic 主题
-     * @param keyword 关键字
-     * @param response 响应内容
-     */
-    private fun callResponseByTopic(
-        topic: String,
-        keyword: String?,
-        response: Response,
-        pollTaskById: (Long) -> ReadyTask?
-    ) {
         // 标准完全匹配的通配符查找并且反馈响应结果
         findAndCallResponse(topic, keyword, response, pollTaskById)
 
@@ -272,13 +255,6 @@ internal class RequestCallArray {
      */
     fun clear() {
         topicCalls.clear()
-    }
-
-    companion object {
-        // 斜杠
-        private const val SLASH = "/"
-        private const val PLUS = "+"
-        private const val SIGN = "#"
     }
 
 }
