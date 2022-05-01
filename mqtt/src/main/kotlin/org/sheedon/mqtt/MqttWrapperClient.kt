@@ -17,7 +17,7 @@ package org.sheedon.mqtt
 
 import android.content.Context
 import android.os.Handler
-import android.os.Looper
+import android.os.HandlerThread
 import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.android.service.MqttAndroidClient.Ack
 import org.eclipse.paho.client.mqttv3.*
@@ -106,11 +106,11 @@ class MqttWrapperClient private constructor(
     // start disconnect flag
     private var startDisconnect = false
 
+    // mqtt线程
+    private val mqttThread: HandlerThread = HandlerThread(MqttWrapperClient::class.simpleName)
+
     // loop reconnect handler
-    private val handler = Handler(Looper.myLooper()!!) {
-        reConnect()
-        true
-    }
+    private var handler: Handler? = null
 
     /**
      * Listener for mqtt action interface.
@@ -166,12 +166,12 @@ class MqttWrapperClient private constructor(
             resetStatus()
 
             // if connected, auto subscribe
-            if (mqttClient.isConnected) {
-                autoSubscribe()
-            }
+            responseHandler.takeIf {
+                mqttClient.isConnected
+            }?.callTask { autoSubscribe() }
 
             // remove reconnect event
-            handler.removeCallbacksAndMessages(null)
+            handler?.removeCallbacksAndMessages(null)
         }
 
         /**
@@ -240,7 +240,7 @@ class MqttWrapperClient private constructor(
          */
         private fun autoReconnect() {
             if (autoReconnect) {
-                handler.sendEmptyMessageDelayed(MESSAGE_WHAT, AUTO_RECONNECT_INTERVAL)
+                handler?.sendEmptyMessageDelayed(MESSAGE_WHAT, AUTO_RECONNECT_INTERVAL)
             }
         }
 
@@ -327,6 +327,13 @@ class MqttWrapperClient private constructor(
     }
 
     init {
+        mqttThread.start()
+
+        handler = Handler(mqttThread.looper) {
+            reConnect()
+            true
+        }
+
         // default bind callbackListener with mqttClient callback
         // use for listen message
         mqttClient.setCallback(callbackListener)
@@ -616,13 +623,17 @@ class MqttWrapperClient private constructor(
         IMqttActionListener {
 
         override fun onSuccess(asyncActionToken: IMqttToken?) {
-            listener?.onSuccess(asyncActionToken)
+            listener?.run {
+                responseHandler.callTask { this.onSuccess(asyncActionToken) }
+            }
             Logger.info("subscribe onSuccess")
             subscribeListener?.onSuccess(IActionListener.ACTION.SUBSCRIBE)
         }
 
         override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-            listener?.onFailure(asyncActionToken, exception)
+            listener?.run {
+                responseHandler.callTask { this.onFailure(asyncActionToken, exception) }
+            }
             Logger.error("subscribe onFailure", exception)
             subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
         }
@@ -757,13 +768,17 @@ class MqttWrapperClient private constructor(
         IMqttActionListener {
 
         override fun onSuccess(asyncActionToken: IMqttToken?) {
-            listener?.onSuccess(asyncActionToken)
+            listener?.run {
+                responseHandler.callTask { this.onSuccess(asyncActionToken) }
+            }
             Logger.info("unsubscribe onSuccess")
             subscribeListener?.onSuccess(IActionListener.ACTION.UNSUBSCRIBE)
         }
 
         override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-            listener?.onFailure(asyncActionToken, exception)
+            listener?.run {
+                responseHandler.callTask { this.onFailure(asyncActionToken, exception) }
+            }
             Logger.error("unsubscribe onFailure", exception)
             subscribeListener?.onFailure(IActionListener.ACTION.UNSUBSCRIBE, exception)
         }
@@ -793,7 +808,9 @@ class MqttWrapperClient private constructor(
             }
 
             override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                listener?.onFailure(asyncActionToken, exception)
+                listener?.run {
+                    responseHandler.callTask { this.onFailure(asyncActionToken, exception) }
+                }
                 Logger.error("unsubscribe onFailure", exception)
                 subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
             }
@@ -817,7 +834,9 @@ class MqttWrapperClient private constructor(
         wildcardFilter.clear()
         subscribe(bodies, object : IMqttActionListener {
             override fun onSuccess(asyncActionToken: IMqttToken?) {
-                listener?.onSuccess(asyncActionToken)
+                listener?.run {
+                    responseHandler.callTask { this.onSuccess(asyncActionToken) }
+                }
                 Logger.info("subscribe onSuccess")
                 subscribeListener?.onSuccess(IActionListener.ACTION.SUBSCRIBE)
             }
@@ -827,7 +846,9 @@ class MqttWrapperClient private constructor(
                 // Re-subscribe the original data
                 subscribe(copyBodies)
                 Logger.error("subscribe onFailure", exception)
-                listener?.onFailure(asyncActionToken, exception)
+                listener?.run {
+                    responseHandler.callTask { this.onFailure(asyncActionToken, exception) }
+                }
                 subscribeListener?.onFailure(IActionListener.ACTION.SUBSCRIBE, exception)
             }
 
