@@ -159,6 +159,3 @@ class ObserverNode {
         }
     }
 }
-
-// 根订阅主题名，若只订阅关键字，不订阅MQTT主题，则统一存入该主题下的消息中
-const val ROOT_OBSERVER = "##"
