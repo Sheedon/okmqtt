@@ -135,7 +135,7 @@ class SubscribePlan(
             return
         }
 
-        // 取消订阅
+        // 执行订阅
         val dispatcher = observable.dispatcher
         dispatcher.requestHandler().subscribe(*topicArray.toTypedArray())
     }

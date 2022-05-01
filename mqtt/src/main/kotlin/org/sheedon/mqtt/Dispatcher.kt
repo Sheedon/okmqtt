@@ -12,7 +12,6 @@ import org.sheedon.mqtt.internal.concurrent.CallbackEnum
 import org.sheedon.mqtt.internal.concurrent.ObserverCallArray
 import org.sheedon.mqtt.internal.concurrent.ReadyTask
 import org.sheedon.mqtt.internal.concurrent.RequestCallArray
-import org.sheedon.mqtt.internal.connection.Listen
 import org.sheedon.mqtt.internal.connection.RealCall
 import org.sheedon.mqtt.internal.connection.RealObservable
 import org.sheedon.mqtt.utils.Logger
@@ -20,12 +19,30 @@ import org.sheedon.rr.timeout.DelayEvent.Companion.build
 import org.sheedon.rr.timeout.OnTimeOutListener
 import org.sheedon.rr.timeout.android.TimeOutHandler
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeoutException
 
 
 /**
- * Policy on manage outstanding requests
+ * MQTT request-response bound dispatcher, that policy on manage ready requests.
+ *
+ * 在调度者中，主要维持ID-Map、请求存储资源、订阅存储资源 和 超时触发器。
+ *
+ * ID-Map：所有的请求和订阅任务，统一会产生一个id-key作为键，将就绪任务作为值，存入到map中[readyCalls]，
+ * 以便于在取消/超时触发时，根据ID得到目标任务，从而将task由[requestCalls]或[observerCalls]中移除。
+ *
+ * requestCalls：作为请求响应模式下所记录的任务池，单一针对于反馈某一个请求所关联的响应消息，而且只反馈一次（未取消情况下，
+ * 超时反馈，或者响应结果反馈）。因此，该对象提供三个方法:
+ * [RequestCallArray.subscribe]，订阅一个响应主题，topic/keyword/topic+keyword的组合形式，将任务添加到队列尾部。
+ * [RequestCallArray.unsubscribe]，取消订阅一个响应主题，根据传入的 关联项，核实该消息是 通过「主题/关键字」取消队列中目标订阅。
+ * [RequestCallArray.callResponse]，响应结果，根据传入的 关联项，核实该消息是 通过「主题/关键字」提取队列首个订阅，并且反馈这个响应。
+ *
+ * observerCalls：作为订阅模式下所记录的任务池，在未执行取消的前提下，将永久保存在队列中。提供的方法如[requestCalls]一致，
+ * [ObserverCallArray.subscribe], [ObserverCallArray.unsubscribe], [ObserverCallArray.callResponse]
+ * 其中[ObserverCallArray.callResponse]，将反馈所有符合条件的订阅信息。
+ *
+ * timeoutHandler：超时触发器，登记并且执行超时事件，在超时的时间点回调记录的事件所包含的任务ID，dispatcher将对超时的任务ID，
+ * 从readyCalls中找到对应的任务，并且向requestCalls执行取消订阅的行为。
+ *
  *
  * @Author: sheedon
  * @Email: sheedonsun@163.com
@@ -72,14 +89,15 @@ internal class Dispatcher(
         back: IBack
     ): Pair<Long, Long> {
 
-        Logger.error("Dispatcher", "subscribe to call: $call and type: ${CallbackEnum.SINGLE}")
+        Logger.info("Dispatcher", "subscribe to call: $call and type: ${CallbackEnum.SINGLE}")
 
         val request = call.originalRequest
+        // 记录并且得到内部消息ID
+        val id = requestCalls.subscribe(
+            call, back, ::loadId,
+            ::offerReadyCalls
+        )
 
-        val (id, task) = requestCalls.subscribe(call, back, ::loadId)
-
-        // 以请求ID为键，以请求任务为值的请求数据池
-        readyCalls[id] = task
         val relation = request.relation
 
         // 计算超时时长，若请求中未填，则采用默认超时时长
@@ -94,6 +112,7 @@ internal class Dispatcher(
         appendTimeoutEvent(timeout, id)
 
         // 将ID返回到调度者，以做后续取消订阅动作
+        // timeout 超时时长
         return Pair(id, timeout)
     }
 
@@ -105,7 +124,10 @@ internal class Dispatcher(
      * @param back 呼叫对象，用于反馈结果
      */
     override fun subscribe(observable: RealObservable, back: IBack): List<Long> {
-        Logger.error("Dispatcher", "subscribe to call: $observable and type: ${CallbackEnum.RETAIN}")
+        Logger.info(
+            "Dispatcher",
+            "subscribe to call: $observable and type: ${CallbackEnum.RETAIN}"
+        )
 
         // 将ID返回到调度者，以做后续取消订阅动作
         return observerCalls.subscribe(
@@ -124,7 +146,7 @@ internal class Dispatcher(
      */
     private fun appendTimeoutEvent(timeout: Long, id: Long) {
         val event = build(id, timeout + System.currentTimeMillis())
-        Logger.error("Dispatcher", "addBinder to addEvent success")
+        Logger.info("Dispatcher", "addBinder to addEvent success")
         timeoutHandler.addEvent(event)
     }
 
@@ -137,12 +159,11 @@ internal class Dispatcher(
         id.forEach {
             val readyTask = readyCalls.remove(it) ?: return@forEach
 
-            val listen = readyTask.listen
             if (readyTask.type == CallbackEnum.SINGLE) {
                 // 取消超时事件
                 timeoutHandler.removeEvent(it)
                 // 取消单次订阅
-                requestCalls.unsubscribe(listen)
+                requestCalls.unsubscribe(readyTask)
             } else if (readyTask.type == CallbackEnum.RETAIN) {
                 // 取消保留订阅
                 observerCalls.unsubscribe(readyTask)
@@ -166,7 +187,7 @@ internal class Dispatcher(
         }
 
         // 请求的反馈执行
-        requestCalls.callResponse(keyword, responseBody, ::pollReadyCallsById, ::callResponse)
+        requestCalls.callResponse(keyword, responseBody, ::pollReadyCallsById)
         // 订阅消息的通知
         observerCalls.callResponse(keyword, responseBody)
     }
@@ -199,47 +220,6 @@ internal class Dispatcher(
     }
 
     /**
-     * 反馈响应结果，分别核实callback的实现类，并且执行反馈操作
-     *
-     * @param back ICallback
-     * @param response 响应结果
-     */
-    private fun callResponse(back: IBack?, listen: Listen, response: Response) {
-        if (back == null) return
-
-        // 反馈为Callback类型
-        if (back is Callback) {
-            callResponse(back, listen, response)
-        } else if (back is ObservableBack) {
-            callResponse(back, listen, response)
-        }
-    }
-
-    /**
-     * 响应反馈结果
-     *
-     * @param callback 反馈
-     */
-    private fun callResponse(callback: Callback, listen: Listen, response: Response) {
-        // 响应对象为Request对象
-        if (listen is RealCall) {
-            callback.onResponse(listen, response)
-        }
-    }
-
-    /**
-     * 响应反馈结果
-     *
-     * @param callback 反馈
-     */
-    private fun callResponse(callback: ObservableBack, listen: Listen, response: Response) {
-        // 响应对象为RealObservable对象
-        if (listen is RealObservable) {
-            callback.onResponse(listen, response)
-        }
-    }
-
-    /**
      * 超时监听器
      */
     private inner class TimeOutListener : OnTimeOutListener<Long> {
@@ -249,7 +229,7 @@ internal class Dispatcher(
             Logger.info("Dispatcher", "onTimeout task($readyTask)")
 
             // 移除请求订阅内容
-            requestCalls.unsubscribe(readyTask.listen)
+            requestCalls.unsubscribe(readyTask)
             // 反馈超时消息
             readyTask.back?.onFailure(e)
         }
