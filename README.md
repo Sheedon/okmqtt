@@ -1,20 +1,24 @@
 # OkMqtt
 ```tex
-An MQTT client for an Android client that performs an MQTT request subscription and distributes the response results on demand.
+An MQTT client for an Android client that performs an MQTT request subscription and distributes the 
+response results on demand.
 ```
 [中文文档](README_CN.md)
 
-MQTT is a client-side server architecture publish/subscribe messaging protocol. The current library gives you a much easier way to schedule.
-OkMqtt is a client for response message distribution and provides a client that binds requests to responses:
+MQTT is a client-side server architecture publish/subscribe messaging protocol. The current library 
+gives you a much easier way to schedule.
 
-* Request management pool, which distributes response results based on request header configuration. And the subscription behavior is decomposed into three types
+OkMqtt is a client for response message distribution and provides a client that binds requests to 
+responses:
+* Request management pool, which distributes response results based on request header configuration. 
+  And the subscription behavior is decomposed into three types
     * Send a message, subscribe to a topic for a response, and finally get a response result.
-  * Send a message without a response.
-  * Subscribe to a set of topics without any messages happening.
+    * Send a message without a response.
+    * Subscribe to a set of topics without any messages happening.
 * Topic filtering, avoid wildcard topics and common topics common subscription, resulting in the same message multiple responses.
 * When the network goes wrong, OkMqtt is relentless and quietly reconnecting.
 
-Using OkMqtt is easy. Its request/response API is designed to be a smooth builder and immutable, with call-back asynchronous calls.
+OkMqtt is easy. Its request/response API is designed to be a smooth builder and immutable, with call-back asynchronous calls.
 
 ## How to use
 
