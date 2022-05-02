@@ -253,6 +253,11 @@ class ObserverCallArray {
         // 标准完全匹配的主题查找并且反馈响应结果
         findAndCallResponse(topic, keyword, response)
 
+        // 订阅主题为空的关键字匹配
+        if (topic != ROOT_OBSERVER) {
+            findAndCallResponse(ROOT_OBSERVER, keyword, response)
+        }
+
         // 订阅信息带通配符的反馈
         val lastIndex = topic.lastIndexOf(SLASH)
         val fullTopic = if (lastIndex == -1) {

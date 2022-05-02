@@ -5,7 +5,7 @@ import kotlin.jvm.Throws
 /**
  * The purpose is to associate a request object with key data that acts on the response.
  *
- * The associated information is one of [topics] and [keyword], If both are configured,
+ * The associated information is [topics] and [keyword], If both are configured,
  * limited use of [keyword].
  *
  * One is to configure the [topic],
