@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+
+    </data>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            tools:context=".MainActivity">
+
+
+            <EditText
+                android:id="@+id/et_topic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_topic" />
+
+            <Spinner
+                android:id="@+id/spinner_qos"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:background="@android:drawable/spinner_background"
+                android:entries="@array/qos"
+                android:spinnerMode="dropdown" />
+
+            <Spinner
+                android:id="@+id/spinner_retain"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:background="@android:drawable/spinner_background"
+                android:entries="@array/retain"
+                android:spinnerMode="dropdown" />
+
+            <EditText
+                android:id="@+id/et_message"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:gravity="start|top"
+                android:inputType="textMultiLine"
+                android:padding="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:text="@string/hint_topic_desc" />
+
+
+            <androidx.appcompat.widget.AppCompatEditText
+                android:id="@+id/et_back_topic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:hint="@string/hint_topic" />
+
+            <androidx.appcompat.widget.AppCompatEditText
+                android:id="@+id/et_keyword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:hint="@string/hint_keyword" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/tv_message"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_margin="16dp"
+                android:background="@color/design_fab_shadow_mid_color"
+                android:hint="@string/hint_mqtt_message"
+                tools:ignore="PrivateResource" />
+
+            <Button
+                android:id="@+id/btn_publish"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_publish" />
+
+        </LinearLayout>
+    </ScrollView>
+</layout>

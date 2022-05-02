@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">mqtt-client-app</string>
+
+
+    <string name="hint_topic">please input topic</string>
+    <string name="hint_keyword">please input keyword</string>
+    <string name="hint_topic_keyword">please input topic or keyword</string>
+    <string name="hint_qos">please input qos(default is 0)</string>
+    <string name="hint_message">please input mqtt message</string>
+    <string name="hint_mqtt_message">mqtt message</string>
+
+
+    <string name="label_publish_message">publish message</string>
+    <string name="label_subscribe_topic">subscribe topic</string>
+    <string name="label_request_and_response">request and response</string>
+    <string name="label_subscribe_topic_array">subscribe topic array</string>
+
+    <string name="label_publish">publish</string>
+    <string name="label_subscribe">subscribe</string>
+    <string name="label_un_subscribe">unsubscribe</string>
+
+    <string name="hint_is_topic">it is topic</string>
+    <string name="hint_topic_desc">Each message must contain a topic to which developers can subscribe
+        to receive corresponding messages. In business development, in addition to subscribing
+        through topics, the topics and content of subscriptions can also be converted into the type
+        of messages that developers need to process, that is, keywords. There are two ways of
+        subscription association: topic association and keyword association.
+    </string>
+
+</resources>

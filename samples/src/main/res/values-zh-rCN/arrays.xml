@@ -1,0 +1,12 @@
+<resources>
+    <string-array name="qos">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
+    <string-array name="retain">
+        <item>false</item>
+        <item>true</item>
+    </string-array>
+</resources>

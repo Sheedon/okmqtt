@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">mqtt-client-app</string>
+
+
+    <string name="hint_topic">请输入主题</string>
+    <string name="hint_keyword">请输入关键字</string>
+    <string name="hint_topic_keyword">请输入主题或关键字</string>
+    <string name="hint_qos">请输入qos(默认为0)</string>
+    <string name="hint_message">请输入MQTT消息</string>
+    <string name="hint_mqtt_message">MQTT消息</string>
+
+
+    <string name="label_publish_message">发布消息</string>
+    <string name="label_subscribe_topic">订阅主题</string>
+    <string name="label_request_and_response">请求和响应</string>
+    <string name="label_subscribe_topic_array">订阅主题数组</string>
+
+    <string name="label_publish">发布</string>
+    <string name="label_subscribe">订阅</string>
+    <string name="label_un_subscribe">取消订阅</string>
+
+
+    <string name="hint_is_topic">是否为主题</string>
+    <string name="hint_topic_desc">每个消息必须包含一个主题，开发者可以订阅该主题，从而接收对应消息。
+        而在业务开发中，除了通过主题订阅外，还可以将订阅的主题和内容转换为开发者需要处理消息的类型，也就是keyword。
+        在此提供两种订阅关联的方式：主题关联和关键字关联。
+    </string>
+
+
+</resources>

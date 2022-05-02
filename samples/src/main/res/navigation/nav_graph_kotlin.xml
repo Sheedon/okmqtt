@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph_java"
+    app:startDestination="@id/okMqttFragment">
+
+    <fragment
+        android:id="@+id/okMqttFragment"
+        android:name="org.sheedon.app.fragment.OkMqttFragment"
+        android:label="OkMqttFragment">
+        <action
+            android:id="@+id/action_to_publish_message"
+            app:destination="@id/publishMessageFragment" />
+        <action
+            android:id="@+id/action_to_subscribe_topic"
+            app:destination="@id/subscribeTopicFragment" />
+        <action
+            android:id="@+id/action_to_request_and_response"
+            app:destination="@id/requestAndResponseFragment" />
+        <action
+            android:id="@+id/action_to_subscribe_array"
+            app:destination="@id/subscribeArrayFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/publishMessageFragment"
+        android:name="org.sheedon.app.fragment.PublishMessageFragment"
+        android:label="PublishMessageFragment" />
+    <fragment
+        android:id="@+id/subscribeTopicFragment"
+        android:name="org.sheedon.app.fragment.SubscribeTopicFragment"
+        android:label="SubscribeTopicFragment" />
+    <fragment
+        android:id="@+id/requestAndResponseFragment"
+        android:name="org.sheedon.app.fragment.RequestAndResponseFragment"
+        android:label="RequestAndResponseFragment" />
+    <fragment
+        android:id="@+id/subscribeArrayFragment"
+        android:name="org.sheedon.app.fragment.SubscribeArrayFragment"
+        android:label="SubscribeArrayFragment" />
+</navigation>
