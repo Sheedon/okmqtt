@@ -120,7 +120,7 @@ class ObserverCallArray {
         relations.forEach {
             // 获取消息ID
             val id = loadId()
-            subscribeRealTask(it, observable, back, loadId(), offerReadyCalls)
+            subscribeRealTask(it, observable, back, id, offerReadyCalls)
             ids.add(id)
         }
 
