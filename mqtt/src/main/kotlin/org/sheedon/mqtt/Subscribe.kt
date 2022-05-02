@@ -63,6 +63,7 @@ class Subscribe internal constructor(
          * If the type is [SubscriptionType.LOCAL], it means a single local request.
          * The default is [SubscriptionType.REMOTE]
          */
+        @JvmOverloads
         fun add(
             topic: String,
             keyword: String? = null,
