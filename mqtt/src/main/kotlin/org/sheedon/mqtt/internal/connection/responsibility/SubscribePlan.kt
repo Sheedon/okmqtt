@@ -138,7 +138,7 @@ class SubscribePlan(
 
         // 执行订阅
         val dispatcher = observable.dispatcher
-        dispatcher.requestHandler().subscribe(*topicArray.toTypedArray())
+        dispatcher.requestHandler().subscribe(*topicArray.toTypedArray(), listener = this)
     }
 
 

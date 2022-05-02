@@ -98,7 +98,7 @@ class UnSubscribePlan(
 
         // 取消订阅
         val dispatcher = observable.dispatcher
-        dispatcher.requestHandler().unsubscribe(*topicArray.toTypedArray())
+        dispatcher.requestHandler().unsubscribe(*topicArray.toTypedArray(), listener = this)
     }
 
 
