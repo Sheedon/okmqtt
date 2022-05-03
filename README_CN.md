@@ -232,26 +232,26 @@ observable.enqueue(new FullCallback() {
 
 Request，是作为发送mqtt消息，订阅一条mqtt主题的承载者。配置信息也是由这两部分的职责组成。
 
-| 字段                 | 类型             | 说明                                                         |
-| -------------------- | ---------------- | ------------------------------------------------------------ |
-| body                 | RequestBody      | 作为构造 MQTT-Topic 和 MqttMessage 的请求内容。 MQTT 消息包含应用程序有效负载和指定如何传递消息的选项。该消息包括一个`有效负载`（消息的主体），表示为一个字节 []。 |
-| body.topic           | String           | 发送一条 mqtt 消息的主题，不能为空。                         |
-| body.data            | String           | mqtt消息，内部会转换为制定编码类型的byte，可为空。           |
-| body.qos             | Integer          | mqtt消息的服务质量，0、1 或 2。默认服务质量：0。             |
-| body.retained        | boolean          | 消息传递引擎是否应保留发布消息。<br />发送一条保留设置为 `true` 并使用空字节数组作为有效负载的消息，例如`new byte[0]`将从服务器清除保留的消息。<br />默认值为false。 |
-| body.charset         | String           | 在发送消息的有效载荷时，接收方可能只能接收到指定字符格式的数据集，所以发送方需要改变字符格式，以便接收方可以处理可读的内容。如果 charset 为空，则采用Client中配置的编码格式。 |
-| body.autoEncode      | boolean          | 是否采用Client中配置的编码格式，若body.charset 不为空，则强制为false。否则，若手动配置配置为false，则不使用Client中配置的编码格式。<br />默认中为true。 |
-|                      |                  |                                                              |
-| relation             | Relation         | 将请求对象与响应的关键数据实现关联的配置。<br />关联的信息是 `主题` 和 `关键字`。<br />1. 如果两者都配置，则使用该订阅主题下的关键字。<br />2. 只配置订阅主题，则只核实指定主题。<br />3. 只配置关键字，则匹配所有主题下的关键字。 |
-| relation.topics      | Topics           | 作为 MQTT 请求或订阅数据源的一部分，它旨在将关联的订阅主题配置为反馈消息。 |
-| topics.topic         | String           | MQTT订阅的主题                                               |
-| topics.qos           | Integer          | MQTT订阅的服务质量，0、1 或 2。默认服务质量：0。             |
-| topics.userContext   | Object           | 用于将上下文传递给回调的可选对象。如果不需要，请使用 null。默认值为空。 |
-| topics.headers       | Headers          | 主题头信息，记录当前订阅主题的配置信息，是否保留订阅和订阅方式。 |
-| headers.attachRecord | boolean          | 是否保留订阅记录，用于mqtt重连后，自动订阅当前主题。         |
-| headers.attachRecord | SubscriptionType | 订阅类型，由 `REMOTE` 和 `LOCAL` 。<br />**REMOTE**：远程订阅，代表该订阅需要真实实现MQTT订阅<br />**LOCAL**：本地订阅，代表该订阅只需要在本地添加主题所对应的监听即可。<br />例如我们在不希望远程订阅带通配符的主题，但本地又不希望重复订阅取消订阅相关主题是，可在本地订阅带通配符的主题，即满足单一主题订阅的需要，又防止MQTT订阅通配符主题导致接收到无效信息。 |
-| relation.keyword     | String           | 作为响应消息的匹配字段进行关联。                             |
-| relation.timeout     | Integer          | 定义了请求将等待网络回调到 MQTT 消息响应建立的最大时间间隔。 |
+| 字段                     | 类型             | 说明                                                         |
+| ------------------------ | ---------------- | ------------------------------------------------------------ |
+| body                     | RequestBody      | 作为构造 MQTT-Topic 和 MqttMessage 的请求内容。 MQTT 消息包含应用程序有效负载和指定如何传递消息的选项。该消息包括一个`有效负载`（消息的主体），表示为一个字节 []。 |
+| body.topic               | String           | 发送一条 mqtt 消息的主题，不能为空。                         |
+| body.data                | String           | mqtt消息，内部会转换为制定编码类型的byte，可为空。           |
+| body.qos                 | Integer          | mqtt消息的服务质量，0、1 或 2。默认服务质量：0。             |
+| body.retained            | boolean          | 消息传递引擎是否应保留发布消息。<br />发送一条保留设置为 `true` 并使用空字节数组作为有效负载的消息，例如`new byte[0]`将从服务器清除保留的消息。<br />默认值为false。 |
+| body.charset             | String           | 在发送消息的有效载荷时，接收方可能只能接收到指定字符格式的数据集，所以发送方需要改变字符格式，以便接收方可以处理可读的内容。如果 charset 为空，则采用Client中配置的编码格式。 |
+| body.autoEncode          | boolean          | 是否采用Client中配置的编码格式，若body.charset 不为空，则强制为false。否则，若手动配置配置为false，则不使用Client中配置的编码格式。<br />默认中为true。 |
+|                          |                  |                                                              |
+| relation                 | Relation         | 将请求对象与响应的关键数据实现关联的配置。<br />关联的信息是 `主题` 和 `关键字`。<br />1. 如果两者都配置，则使用该订阅主题下的关键字。<br />2. 只配置订阅主题，则只核实指定主题。<br />3. 只配置关键字，则匹配所有主题下的关键字。 |
+| relation.topics          | Topics           | 作为 MQTT 请求或订阅数据源的一部分，它旨在将关联的订阅主题配置为反馈消息。 |
+| topics.topic             | String           | MQTT订阅的主题                                               |
+| topics.qos               | Integer          | MQTT订阅的服务质量，0、1 或 2。默认服务质量：0。             |
+| topics.userContext       | Object           | 用于将上下文传递给回调的可选对象。如果不需要，请使用 null。默认值为空。 |
+| topics.headers           | Headers          | 主题头信息，记录当前订阅主题的配置信息，是否保留订阅和订阅方式。 |
+| headers.attachRecord     | boolean          | 是否保留订阅记录，用于mqtt重连后，自动订阅当前主题。         |
+| headers.subscriptionType | SubscriptionType | 订阅类型，由 `REMOTE` 和 `LOCAL` 。<br />**REMOTE**：远程订阅，代表该订阅需要真实实现MQTT订阅<br />**LOCAL**：本地订阅，代表该订阅只需要在本地添加主题所对应的监听即可。<br />例如我们在不希望远程订阅带通配符的主题，但本地又不希望重复订阅取消订阅相关主题是，可在本地订阅带通配符的主题，即满足单一主题订阅的需要，又防止MQTT订阅通配符主题导致接收到无效信息。 |
+| relation.keyword         | String           | 作为响应消息的匹配字段进行关联。                             |
+| relation.timeout         | Integer          | 定义了请求将等待网络回调到 MQTT 消息响应建立的最大时间间隔。 |
 
 
 

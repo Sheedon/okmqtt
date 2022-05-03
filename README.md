@@ -253,26 +253,26 @@ As mqtt-client should be shared, and use `new OkMqttClient.Builder()` to create 
 
 Request，Is the bearer that sends MQTT messages and subscribes to an MQTT topic. The configuration information also consists of the responsibilities of these two parts.
 
-| field                | type             | description                                                  |
-| -------------------- | ---------------- | ------------------------------------------------------------ |
-| body                 | RequestBody      | As the request content for constructing mqTT-Topic and MqttMessage. MQTT messages contain the application payload and options to specify how the message is delivered. The message consists of a 'payload' (the body of the message) represented as a byte []. |
-| body.topic           | String           | The subject to which an MQTT message is sent, and cannot be empty. |
-| body.data            | String           | MQTT messages, internally converted to bytes of the specified encoding type, can be null. |
-| body.qos             | Integer          | Quality of service for MQTT messages, 0, 1, or 2. Default quality of service: 0. |
-| body.retained        | boolean          | Whether the messaging engine should keep publishing messages. <br /> sends a message that is reserved to 'true' and uses an empty byte array as the payload, such as' new Byte [0] 'to clear reserved messages from the server. <br /> Defaults to false. |
-| body.charset         | String           | When sending the payload of a message, the receiver may only receive a data set in a specified character format, so the sender needs to change the character format so that the receiver can process the readable content. If charset is empty, the encoding format configured in the Client is used. |
-| body.autoEncode      | boolean          | Whether to use the encoding format configured in Client. If body.charset is not empty, false is mandatory. Otherwise, if the manual configuration is set to false, the encoding format configured in the Client is not used. <br /> Is true by default. |
-|                      |                  |                                                              |
-| relation             | Relation         | The configuration that associates the request object with the key data of the response. The associated information is' subject 'and' keyword '. <br />1. If both are configured, the keywords under the subscription topic are used. <br />2. Configure only subscribed topics, and verify only specified topics. <br />3. If only keywords are configured, the keywords of all topics are matched. |
-| relation.topics      | Topics           | As part of an MQTT request or subscription data source, it is intended to configure the associated subscription topic as a feedback message. |
-| topics.topic         | String           | Topics to which MQTT subscribed                              |
-| topics.qos           | Integer          | Quality of service for an MQTT subscription, 0, 1, or 2. Default quality of service: 0. |
-| topics.userContext   | Object           | Optional object used to pass the context to the callback. If not, use NULL. The default value is null. |
-| topics.headers       | Headers          | Topic header information, which records the configuration information of the current subscribed topic, whether to reserve the subscription, and the subscription mode. |
-| headers.attachRecord | boolean          | Whether to keep a subscription record for automatic subscription to the current topic after MQTT reconnection. |
-| headers.attachRecord | SubscriptionType | Subscription type, including 'REMOTE' and 'LOCAL'. <br />**REMOTE** : REMOTE subscription, which requires the actual implementation of MQTT subscription <br />**LOCAL** : LOCAL subscription, which requires the LOCAL addition of the topic corresponding to the listener. <br />For example, when we do not want to subscribe remotely to wildcard topics, but do not want to re-subscribe locally to unsubscribe, we can subscribe locally to wildcard topics to meet the needs of a single topic subscription and prevent MQTT subscribes to wildcard topics from receiving invalid information. |
-| relation.keyword     | String           | Is associated as a matching field of the response message.   |
-| relation.timeout     | Integer          | Defines the maximum interval at which a request will wait for a network callback until an MQTT message response is established. |
+| field                    | type             | description                                                  |
+| ------------------------ | ---------------- | ------------------------------------------------------------ |
+| body                     | RequestBody      | As the request content for constructing mqTT-Topic and MqttMessage. MQTT messages contain the application payload and options to specify how the message is delivered. The message consists of a 'payload' (the body of the message) represented as a byte []. |
+| body.topic               | String           | The subject to which an MQTT message is sent, and cannot be empty. |
+| body.data                | String           | MQTT messages, internally converted to bytes of the specified encoding type, can be null. |
+| body.qos                 | Integer          | Quality of service for MQTT messages, 0, 1, or 2. Default quality of service: 0. |
+| body.retained            | boolean          | Whether the messaging engine should keep publishing messages. <br /> sends a message that is reserved to 'true' and uses an empty byte array as the payload, such as' new Byte [0] 'to clear reserved messages from the server. <br /> Defaults to false. |
+| body.charset             | String           | When sending the payload of a message, the receiver may only receive a data set in a specified character format, so the sender needs to change the character format so that the receiver can process the readable content. If charset is empty, the encoding format configured in the Client is used. |
+| body.autoEncode          | boolean          | Whether to use the encoding format configured in Client. If body.charset is not empty, false is mandatory. Otherwise, if the manual configuration is set to false, the encoding format configured in the Client is not used. <br /> Is true by default. |
+|                          |                  |                                                              |
+| relation                 | Relation         | The configuration that associates the request object with the key data of the response. The associated information is' subject 'and' keyword '. <br />1. If both are configured, the keywords under the subscription topic are used. <br />2. Configure only subscribed topics, and verify only specified topics. <br />3. If only keywords are configured, the keywords of all topics are matched. |
+| relation.topics          | Topics           | As part of an MQTT request or subscription data source, it is intended to configure the associated subscription topic as a feedback message. |
+| topics.topic             | String           | Topics to which MQTT subscribed                              |
+| topics.qos               | Integer          | Quality of service for an MQTT subscription, 0, 1, or 2. Default quality of service: 0. |
+| topics.userContext       | Object           | Optional object used to pass the context to the callback. If not, use NULL. The default value is null. |
+| topics.headers           | Headers          | Topic header information, which records the configuration information of the current subscribed topic, whether to reserve the subscription, and the subscription mode. |
+| headers.attachRecord     | boolean          | Whether to keep a subscription record for automatic subscription to the current topic after MQTT reconnection. |
+| headers.subscriptionType | SubscriptionType | Subscription type, including 'REMOTE' and 'LOCAL'. <br />**REMOTE** : REMOTE subscription, which requires the actual implementation of MQTT subscription <br />**LOCAL** : LOCAL subscription, which requires the LOCAL addition of the topic corresponding to the listener. <br />For example, when we do not want to subscribe remotely to wildcard topics, but do not want to re-subscribe locally to unsubscribe, we can subscribe locally to wildcard topics to meet the needs of a single topic subscription and prevent MQTT subscribes to wildcard topics from receiving invalid information. |
+| relation.keyword         | String           | Is associated as a matching field of the response message.   |
+| relation.timeout         | Integer          | Defines the maximum interval at which a request will wait for a network callback until an MQTT message response is established. |
 
 
 
