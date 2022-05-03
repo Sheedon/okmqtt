@@ -20,13 +20,21 @@ internal class WildcardFilter @JvmOverloads constructor(
     // 订阅的主题集合
     var topicsBodies: MutableSet<Topics> = mutableSetOf()
 
+    /**
+     * 将构建WildcardFilter传入的订阅主题集合，通过topicsPool核实后，返回当前需要订阅的主题集合
+     * */
     init {
-        val pop = topicsPool.pop(_topicsBodies)
-        topicsBodies.addAll(pop.first)
+        val (addTopics, _) = topicsPool.push(_topicsBodies)
+        topicsBodies.addAll(addTopics)
     }
 
     /**
-     * 订阅主题
+     * 订阅主题，借由topicsPool存储订阅的主题，并且返回两个订阅集合[addTopics],[removeTopics]
+     * [addTopics]: 代表当次需要订阅的主题，一般若有值，那必然是body。
+     * [removeTopics]: 代表当次需要取消订阅的主题，若订阅是带通配符的主题，那么对应的历史订阅在该主题下的「mqtt主题」
+     * 就需要移除，否则将mqtt中存在重复接收同一个主题消息的问题。
+     * 例如：已订阅「AA/BB/CC」，当前订阅「AA/BB/#」,那么接收到「AA/BB/CC」的主题消息时，「AA/BB/CC」和「AA/BB/#」
+     * 各会收到一次，不利于开发区分。
      *
      * @param body 单项订阅内容
      */
@@ -48,7 +56,14 @@ internal class WildcardFilter @JvmOverloads constructor(
     }
 
     /**
-     * 订阅主题
+     * 订阅主题，借由topicsPool存储订阅的主题，并且返回两个订阅集合[addTopics],[removeTopics]
+     * [addTopics]: 代表当次需要订阅的主题，一般若有值，那必然是在bodies中。
+     * [removeTopics]: 代表当次需要取消订阅的主题，若订阅是带通配符的主题，那么对应的历史订阅在该主题下的「mqtt主题」
+     * 就需要移除，否则将mqtt中存在重复接收同一个主题消息的问题。
+     * 例如：已订阅「AA/BB/CC」，当前订阅「AA/BB/#」,那么接收到「AA/BB/CC」的主题消息时，「AA/BB/CC」和「AA/BB/#」
+     * 各会收到一次，不利于开发区分。
+     *
+     * 批量订阅，需要从订阅的头部文件中取值attachRecord，来决定是否保留到当前记录中，用于后续mqtt重连后，自动订阅。
      *
      * @param bodies 订阅内容集合
      */
@@ -98,7 +113,10 @@ internal class WildcardFilter @JvmOverloads constructor(
 
 
     /**
-     * 取消订阅主题
+     * 取消订阅主题，借由topicsPool存储订阅的主题，并且返回两个订阅集合[addTopics],[removeTopics]
+     * [addTopics]: 代表当次需要订阅的主题，在取消订阅主题后，需要恢复的原本被包含的订阅主题。
+     * [removeTopics]: 代表当次需要取消订阅的主题，若有值必然是body。
+     * 例如：已订阅「AA/BB/CC」（已被取消订阅），「AA/BB/#」，当前取消订阅「AA/BB/#」，对应需要恢复「AA/BB/CC」的订阅。
      *
      * @param body 单项订阅内容
      */
@@ -120,7 +138,12 @@ internal class WildcardFilter @JvmOverloads constructor(
     }
 
     /**
-     * 取消订阅主题
+     * 取消订阅主题，借由topicsPool存储订阅的主题，并且返回两个订阅集合[addTopics],[removeTopics]
+     * [addTopics]: 代表当次需要订阅的主题，在取消订阅主题后，需要恢复的原本被包含的订阅主题。
+     * [removeTopics]: 代表当次需要取消订阅的主题，一般在bodies中。
+     * 例如：已订阅「AA/BB/CC」（已被取消订阅），「AA/BB/#」，当前取消订阅「AA/BB/#」，对应需要恢复「AA/BB/CC」的订阅。
+     *
+     * 需要从取消订阅的头部文件中取值attachRecord，来决定是否保留到当前记录中，用于后续mqtt重连后，自动订阅。
      *
      * @param bodies 订阅内容集合
      */

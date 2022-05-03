@@ -1,6 +1,9 @@
 package org.sheedon.mqtt.internal
 
 import org.sheedon.mqtt.Topics
+import org.sheedon.mqtt.internal.Contract.ROOT_NAME
+import org.sheedon.mqtt.internal.Contract.SIGN
+import org.sheedon.mqtt.internal.Contract.SLASH
 import java.lang.StringBuilder
 
 /**
@@ -10,9 +13,6 @@ import java.lang.StringBuilder
  * @Email: sheedonsun@163.com
  * @Date: 2022/3/4 10:02 下午
  */
-const val ROOT_NAME = "org.sheedon.mqtt.root"
-const val REGEX = "/"
-
 class TopicsPool {
 
     // 根节点
@@ -21,8 +21,8 @@ class TopicsPool {
 
     // 优先存在#，都存在按/个数由少到多排序，否则根据存在+，按/个数由少到多排序
     val sortCondition = Comparator<Topics> { condition1, condition2 ->
-        val o1End = condition1.topic.endsWith("#")
-        val o2End = condition2.topic.endsWith("#")
+        val o1End = condition1.topic.endsWith(SIGN)
+        val o2End = condition2.topic.endsWith(SIGN)
         compareProcess(
             o1End, o2End,
             compareCount(condition1, condition2),
@@ -36,17 +36,25 @@ class TopicsPool {
      * @return 包含实际需要订阅的路径集合，和取消订阅的路径集合
      */
     fun push(bodies: List<Topics>): Pair<Set<Topics>, Set<Topics>> {
+        // 新增和删除的主题集合
         val addArray = mutableSetOf<Topics>()
         val removeArray = mutableSetOf<Topics>()
+
+        // 传入的订阅对象按照sortCondition排序，以降低插入和删除行为。
         val targetList = bodies.sortedWith(sortCondition)
         targetList.forEach { path ->
+            // 若主题为空则过滤
             if (path.topic.isEmpty()) {
                 return@forEach
             }
-            push(path).also { pair ->
-                removeArray.addAll(pair.second)
-                pair.first?.let {
+            // push操作后得到新增和移除的主题
+            push(path).also { (addTopic, removeTopics) ->
+                // 移除订阅内容
+                removeArray.addAll(removeTopics)
+                addTopic?.let {
+                    // 添加当前需要订阅项
                     addArray.add(it)
+                    // 该订阅内容从removeArray中移除
                     removeArray.remove(it)
                 }
             }
@@ -72,7 +80,7 @@ class TopicsPool {
         }
 
         // 按/分割字符串
-        val noteArray = path.split(REGEX)
+        val noteArray = path.split(SLASH)
         // 当前路径
         var currentNote = loadRootNote(path)
         // 用于记录多级#，是否需要新增订阅
@@ -90,13 +98,14 @@ class TopicsPool {
             }
             currentNote.incrementFlag()
 
-            pathName.append(noteName).append("/")
+            // 处理路径，空路径+当前节点名+/
+            pathName.append(noteName).append(SLASH)
             if (needAddSubscribe) {
                 when {
                     currentNote.hasPoundSign() -> needAddSubscribe = false
                     currentNote.hasAddSign()
                             && index == size - 1
-                            && noteName != "#"
+                            && noteName != SIGN
                     -> needAddSubscribe = false
                 }
             }
@@ -192,7 +201,7 @@ class TopicsPool {
         }
 
         // 按/分割字符串
-        val noteArray = path.topic.split(REGEX)
+        val noteArray = path.topic.split(SLASH)
         // 当前路径
         var currentNote = loadRootNote(path.topic)
         // 完整路径名
@@ -206,7 +215,7 @@ class TopicsPool {
                 return@forEachIndexed
             }
 
-            pathName.append(noteName).append("/")
+            pathName.append(noteName).append(SLASH)
             val note = currentNote.getChildNote(noteName)
             if (note == null) {
                 currentNote.tryDeleteSelf()

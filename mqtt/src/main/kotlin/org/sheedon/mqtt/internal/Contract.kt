@@ -10,6 +10,8 @@ internal object Contract {
     // 根订阅主题名，若只订阅关键字，不订阅MQTT主题，则统一存入该主题下的消息中
     const val ROOT_OBSERVER = "##"
 
+    const val ROOT_NAME = "org.sheedon.mqtt.root"
+
     // 斜杠
     const val SLASH = "/"
     const val PLUS = "+"

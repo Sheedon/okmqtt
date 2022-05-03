@@ -1,6 +1,10 @@
 package org.sheedon.mqtt.internal
 
 import org.sheedon.mqtt.Topics
+import org.sheedon.mqtt.internal.Contract.PLUS
+import org.sheedon.mqtt.internal.Contract.ROOT_NAME
+import org.sheedon.mqtt.internal.Contract.SIGN
+import org.sheedon.mqtt.internal.Contract.SLASH
 import java.lang.StringBuilder
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -37,14 +41,14 @@ class ObservableNote @JvmOverloads constructor(
      * 是否存在#号
      */
     fun hasPoundSign(): Boolean {
-        return childNotes["#"] != null
+        return childNotes[SIGN] != null
     }
 
     /**
      * 是否存在+号
      */
     fun hasAddSign(): Boolean {
-        return childNotes["+"] != null
+        return childNotes[PLUS] != null
     }
 
     /**
@@ -57,12 +61,10 @@ class ObservableNote @JvmOverloads constructor(
             synchronized(this) {
                 if (childNotes[noteName] == null) {
                     childNotes[noteName] = ObservableNote(noteName, this)
-                    childNotes[noteName]?.flag?.incrementAndGet()
                 }
             }
-        } else {
-            childNotes[noteName]?.flag?.incrementAndGet()
         }
+        childNotes[noteName]?.flag?.incrementAndGet()
         return childNotes[noteName]!!
     }
 
@@ -98,7 +100,7 @@ class ObservableNote @JvmOverloads constructor(
      * @return true:已存在的通配符，false:新增的节点
      */
     fun checkWildcardAndNotEmpty(): Boolean {
-        return (name == "#" || name == "+") && status != NoteStatus.EMPTY
+        return (name == SIGN || name == PLUS) && status != NoteStatus.EMPTY
     }
 
     /**
@@ -122,7 +124,7 @@ class ObservableNote @JvmOverloads constructor(
      * 其他，则存在子节点
      */
     fun hasChildNotes(): Boolean {
-        if (name == "#" || name == "+") {
+        if (name == SIGN || name == PLUS) {
             return false
         }
         return childNotes.isNotEmpty()
@@ -171,14 +173,14 @@ class ObservableNote @JvmOverloads constructor(
      * 当前节点是否为 #
      */
     fun isPoundSign(): Boolean {
-        return name == "#"
+        return name == SIGN
     }
 
     /**
      * 当前节点是否为 +
      */
     fun isPlusSign(): Boolean {
-        return name == "+"
+        return name == PLUS
     }
 
     /**
@@ -192,7 +194,7 @@ class ObservableNote @JvmOverloads constructor(
         removeArray: MutableSet<Topics>
     ) {
         parent?.childNotes?.forEach { entry ->
-            entry.takeIf { it.key != "#" }
+            entry.takeIf { it.key != SIGN }
                 ?.also {
                     val value = it.value
                     if (value.status == NoteStatus.ENABLE) {
@@ -202,7 +204,7 @@ class ObservableNote @JvmOverloads constructor(
                         }
                         value.status = NoteStatus.DISABLE
                     }
-                    val current = StringBuilder(pathName).append(value.name).append(REGEX)
+                    val current = StringBuilder(pathName).append(value.name).append(SLASH)
                     disableNextPoundSign(value, current, removeArray)
                 }
         }
@@ -225,7 +227,7 @@ class ObservableNote @JvmOverloads constructor(
                     removeArray.add(currentTopic)
                 }
             }
-            val current = StringBuilder(pathName).append(value.name).append(REGEX)
+            val current = StringBuilder(pathName).append(value.name).append(SLASH)
             disableNextPoundSign(value, current, removeArray)
         }
     }
@@ -239,7 +241,7 @@ class ObservableNote @JvmOverloads constructor(
         removeArray: MutableSet<Topics>
     ) {
         parent?.childNotes?.forEach { entry ->
-            entry.takeIf { it.key != "+" }
+            entry.takeIf { it.key != PLUS }
                 ?.also {
                     val value = it.value
                     if (value.status == NoteStatus.ENABLE) {
@@ -324,9 +326,9 @@ class ObservableNote @JvmOverloads constructor(
     ) {
         parent?.childNotes?.also { childNotes ->
             // 不存在「+」，启动同级和下级
-            if (childNotes["+"] == null) {
+            if (childNotes[PLUS] == null) {
                 childNotes.values.forEach {
-                    if (it.name == "#") {
+                    if (it.name == SIGN) {
                         return@forEach
                     }
                     if (it.isDisable()) {
@@ -336,19 +338,19 @@ class ObservableNote @JvmOverloads constructor(
                             addArray.add(currentTopic)
                         }
                     }
-                    val current = StringBuilder(pathName).append(it.name).append(REGEX)
+                    val current = StringBuilder(pathName).append(it.name).append(SLASH)
                     enableNextPoundSign(it, current, addArray)
                 }
                 return
             }
 
-            childNotes["+"]?.status = NoteStatus.ENABLE
+            childNotes[PLUS]?.status = NoteStatus.ENABLE
         }
 
         // 检索下级
         parent?.childNotes?.forEach { entry ->
-            if (entry.key != "#" && entry.key != "+") {
-                val current = StringBuilder(pathName).append(entry.key).append(REGEX)
+            if (entry.key != SIGN && entry.key != PLUS) {
+                val current = StringBuilder(pathName).append(entry.key).append(SLASH)
                 enableNextPoundSign(entry.value, current, addArray)
             }
         }
@@ -364,7 +366,7 @@ class ObservableNote @JvmOverloads constructor(
         addArray: MutableSet<Topics>
     ) {
         parent?.childNotes?.forEach {
-            if (it.key != "+" && it.value.isDisable()) {
+            if (it.key != PLUS && it.value.isDisable()) {
                 it.value.status = NoteStatus.ENABLE
                 val currentTopic = it.value.currentTopic
                 if (currentTopic != null) {
@@ -386,7 +388,7 @@ class ObservableNote @JvmOverloads constructor(
     ) {
         val child = parent.childNotes
         // # 启动
-        var note = child["#"]
+        var note = child[SIGN]
         if (note != null) {
             note.status = NoteStatus.ENABLE
             val topic = note.currentTopic
@@ -397,7 +399,7 @@ class ObservableNote @JvmOverloads constructor(
         }
 
         // + 启动
-        note = child["+"]
+        note = child[PLUS]
         if (note != null) {
             note.status = NoteStatus.ENABLE
             val topic = note.currentTopic
@@ -405,8 +407,8 @@ class ObservableNote @JvmOverloads constructor(
                 addArray.add(topic)
             }
             child.forEach {
-                if (it.key != "+") {
-                    val current = StringBuilder(pathName).append(it.value.name).append(REGEX)
+                if (it.key != PLUS) {
+                    val current = StringBuilder(pathName).append(it.value.name).append(SLASH)
                     enableNextPoundSign(it.value, current, addArray)
                 }
             }
@@ -420,9 +422,9 @@ class ObservableNote @JvmOverloads constructor(
                 if (topic != null) {
                     addArray.add(topic)
                 }
-                it.value.status = 1
+                it.value.status = NoteStatus.ENABLE
             }
-            val current = StringBuilder(pathName).append(it.value.name).append(REGEX)
+            val current = StringBuilder(pathName).append(it.value.name).append(SLASH)
             enableNextPoundSign(it.value, current, addArray)
         }
     }
