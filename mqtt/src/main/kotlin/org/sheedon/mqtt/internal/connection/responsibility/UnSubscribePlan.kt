@@ -22,6 +22,7 @@ class UnSubscribePlan(
     // 是否完成取消订阅
     private var unSubscribed = false
     private var canceled = false
+    private var subscribed = false
 
 
     /**
@@ -127,7 +128,7 @@ class UnSubscribePlan(
      */
     override fun cancel() {
         if (unSubscribed) {
-            subscribe()
+            realCancel()
         }
         super.cancel()
     }
@@ -138,7 +139,7 @@ class UnSubscribePlan(
     override fun onSuccess(asyncActionToken: IMqttToken?) {
         unSubscribed = true
         if (call.isCanceled()) {
-            subscribe()
+            realCancel()
             return
         }
 
@@ -168,6 +169,7 @@ class UnSubscribePlan(
      * 订阅失败
      */
     override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+        subscribe()
         if (call is RealObservable) {
             call.back?.onFailure(exception)
         }
@@ -178,11 +180,22 @@ class UnSubscribePlan(
      *
      * @param observable 真实的观察者对象，将内部的request/subscribe订阅
      * */
-    private fun subscribe() {
+    private fun realCancel() {
         if (canceled) {
             return
         }
         canceled = true
+        subscribe()
+    }
+
+    /**
+     * 执行订阅,对于取消订阅的取消。在以下两种情况下执行调用，
+     * 1.取消订阅失败，相对应的订阅主题取消。
+     * 2.执行取消（取消订阅），相对应的取消订阅主题取消。
+     */
+    private fun subscribe() {
+        if (subscribed) return
+        subscribed = true
 
         val observable = call as RealObservable
 
