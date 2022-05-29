@@ -58,4 +58,4 @@ dependencies {
 }
 
 //apply from: '../script/gradle-jcenter-push.gradle'
-apply from: '../script/push_local.gradle'
+//apply from: '../script/push_local.gradle'
