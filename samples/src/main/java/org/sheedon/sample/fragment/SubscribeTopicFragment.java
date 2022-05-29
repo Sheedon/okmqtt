@@ -81,7 +81,7 @@ public class SubscribeTopicFragment extends Fragment {
         String keywordStr = keywordText != null ? keywordText.toString() : "";
 
         Request request = new Request.Builder()
-                .backTopic(topicStr)
+                .subscribeTopic(topicStr)
                 .keyword(keywordStr)
                 .build();
 

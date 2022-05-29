@@ -45,20 +45,20 @@ class RequestAndResponseFragment : Fragment() {
 
     private fun requestAndResponse() {
         val topicText = binding.etTopic.text
-        val backTopicText = binding.etBackTopic.text
+        val subscribeTopicText = binding.etBackTopic.text
         val keywordText = binding.etKeyword.text
         if (topicText == null || TextUtils.isEmpty(topicText.toString())) {
             Toast.makeText(context, R.string.hint_topic, Toast.LENGTH_LONG).show()
             return
         }
-        if ((backTopicText == null || TextUtils.isEmpty(backTopicText.toString()))
+        if ((subscribeTopicText == null || TextUtils.isEmpty(subscribeTopicText.toString()))
             && (keywordText == null || TextUtils.isEmpty(keywordText.toString()))
         ) {
             Toast.makeText(context, R.string.hint_topic_keyword, Toast.LENGTH_LONG).show()
             return
         }
 
-        val topicStr = backTopicText?.toString() ?: ""
+        val topicStr = subscribeTopicText?.toString() ?: ""
         val keywordStr = keywordText?.toString() ?: ""
         val qosValue = binding.spinnerQos.selectedItem.toString().toInt()
         val retainValue = binding.spinnerRetain.selectedItem.toString() == "true"
@@ -70,7 +70,7 @@ class RequestAndResponseFragment : Fragment() {
         // 构建请求类
         val request = Request.Builder()
             .topic(topicText.toString(), qosValue, retainValue)
-            .backTopic(topicStr)
+            .subscribeTopic(topicStr)
             .keyword(keywordStr)
             .data(message)
             .build()

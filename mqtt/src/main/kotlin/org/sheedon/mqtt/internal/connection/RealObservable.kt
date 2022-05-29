@@ -68,7 +68,18 @@ class RealObservable private constructor(
      * @param callback 结果响应，[callback.onFailure] 订阅失败的结果反馈，
      * [callback.onResponse] 订阅成功反馈
      */
-    override fun enqueue(callback: SubscribeBack?) {
+    override fun enqueue() {
+        isSubscribe = true
+        enqueueReal(null)
+    }
+
+    /**
+     * 订阅一个主题，监听订阅结果
+     *
+     * @param callback 结果响应，[callback.onFailure] 订阅失败的结果反馈，
+     * [callback.onResponse] 订阅成功反馈
+     */
+    override fun enqueue(callback: SubscribeBack) {
         isSubscribe = true
         enqueueReal(callback)
     }

@@ -84,13 +84,13 @@ call.publish();
 
 构建请求对象，通配添加订阅关联项，实现MQTT订阅。订阅方式有两种：
 
-其一，采用mqtt主题订阅，执行「Request.Builder」构造的方法「backTopic」，将订阅主题配置入请求对象中，订阅主题支持通配符。
+其一，采用mqtt主题订阅，执行「Request.Builder」构造的方法「subscribeTopic」，将订阅主题配置入请求对象中，订阅主题支持通配符。
 
 ```java
 // 1.构建订阅消息的请求对象，主要是反馈的主题
 Request request = new Request.Builder()
         // 订阅的主题
-        .backTopic(topic)
+        .subscribeTopic(topic)
         .build();
 
 // 2.通过配置的客户端类，来得到Observable
@@ -115,7 +115,7 @@ observable.enqueue(new ObservableBack() {
 // 1.构建订阅消息的请求对象，主要是反馈的主题
 Request request = new Request.Builder()
         // 订阅的主题
-        .backTopic("sheedon/data/alarm")
+        .subscribeTopic("sheedon/data/alarm")
         // 订阅的关键字
         .keyword("lamp")
         .build();
@@ -152,7 +152,7 @@ Request request = new Request.Builder()
         // mqtt消息有效载荷
         .data(message)
         // 订阅的主题
-        .backTopic(topicStr)
+        .subscribeTopic(topicStr)
         // 订阅的关键字
         .keyword(keywordStr)
         .build();

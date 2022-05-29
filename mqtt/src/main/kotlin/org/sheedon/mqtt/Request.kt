@@ -71,7 +71,7 @@ import androidx.annotation.IntRange
  * Request request = new Request.Builder()
  *     .topic("classify/device/recyclable/data/test")
  *     .data("{\"message\":\"EMPTY\"}")
- *     .backTopic("classify/cloud/recyclable/cmd/test")
+ *     .subscribeTopic("classify/cloud/recyclable/cmd/test")
  *     .build();
  * ```
  *
@@ -185,6 +185,7 @@ class Request internal constructor(
         @JvmOverloads
         open fun charset(charset: String, autoEncode: Boolean = true) = apply {
             this.charset = charset
+            this.autoEncode = autoEncode
         }
 
         /**
@@ -202,7 +203,7 @@ class Request internal constructor(
          *
          * Only after subscribing to a topic can it receive the payload of
          * the corresponding topic and communicate.
-         * So backTopic is used to subscribe to the topic, and qos is the message quality of
+         * So subscribeTopic is used to subscribe to the topic, and qos is the message quality of
          * the subscribed topic.
          * When attachRecord is true, the topic will be recorded in the subscription message pool.
          * If mqtt is re-subscribed, automatic subscription can be realized unless the developer
@@ -215,7 +216,7 @@ class Request internal constructor(
          * When the response message is returned from the server to the client, it only tries to
          * match the message and distributes it internally.
          *
-         * @param backTopic Topic for subscribing to mqtt messages
+         * @param subscribeTopic Topic for subscribing to mqtt messages
          * @param qos Quality of subscription mqtt messages
          * @param userContext optional object used to pass context to the callback.
          *                  Use null if not required. Default value is null.
@@ -223,8 +224,8 @@ class Request internal constructor(
          * @param subscriptionType The request type, which limits the scope of subscription messages
          */
         @JvmOverloads
-        open fun backTopic(
-            backTopic: String,
+        open fun subscribeTopic(
+            subscribeTopic: String,
             @IntRange(from = 0, to = 2) qos: Int = 0,
             userContext: Any? = null,
             attachRecord: Boolean = false,
@@ -232,7 +233,7 @@ class Request internal constructor(
         ) = apply {
             relation.topics(
                 Topics(
-                    backTopic,
+                    subscribeTopic,
                     qos,
                     userContext,
                     Headers(attachRecord, subscriptionType)

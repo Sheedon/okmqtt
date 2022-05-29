@@ -56,7 +56,7 @@ public class RequestAndResponseFragment extends Fragment {
 
     private void requestAndResponse() {
         Editable topicText = binding.etTopic.getText();
-        Editable backTopicText = binding.etBackTopic.getText();
+        Editable subscribeTopicText = binding.etBackTopic.getText();
         Editable keywordText = binding.etKeyword.getText();
 
         if (topicText == null || TextUtils.isEmpty(topicText.toString())) {
@@ -64,12 +64,12 @@ public class RequestAndResponseFragment extends Fragment {
             return;
         }
 
-        if ((backTopicText == null || TextUtils.isEmpty(backTopicText.toString()))
+        if ((subscribeTopicText == null || TextUtils.isEmpty(subscribeTopicText.toString()))
                 && (keywordText == null || TextUtils.isEmpty(keywordText.toString()))) {
             Toast.makeText(getContext(), R.string.hint_topic_keyword, Toast.LENGTH_LONG).show();
             return;
         }
-        String topicStr = backTopicText != null ? backTopicText.toString() : "";
+        String topicStr = subscribeTopicText != null ? subscribeTopicText.toString() : "";
         String keywordStr = keywordText != null ? keywordText.toString() : "";
 
         int qosValue = Integer.parseInt(binding.spinnerQos.getSelectedItem().toString());
@@ -81,7 +81,7 @@ public class RequestAndResponseFragment extends Fragment {
         // 构建请求类
         Request request = new Request.Builder()
                 .topic(topicText.toString(), qosValue, retainValue)
-                .backTopic(topicStr)
+                .subscribeTopic(topicStr)
                 .keyword(keywordStr)
                 .data(message)
                 .build();

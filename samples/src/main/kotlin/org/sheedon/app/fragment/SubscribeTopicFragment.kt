@@ -70,7 +70,7 @@ class SubscribeTopicFragment : Fragment() {
         val topicStr = topicText?.toString() ?: ""
         val keywordStr = keywordText?.toString() ?: ""
         val request = Request.Builder()
-            .backTopic(topicStr)
+            .subscribeTopic(topicStr)
             .keyword(keywordStr)
             .build()
 

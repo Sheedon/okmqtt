@@ -90,13 +90,13 @@ call.publish();
 
 Build the request object, and implement the MQTT subscription by adding subscription associated items. There are two ways to subscribe:
 
-First, the use of MQTT topic subscription, the implementation of "Request.Builder" construction method "backTopic", the subscription topic configuration into the Request object, subscription topic support wildcard.
+First, the use of MQTT topic subscription, the implementation of "Request.Builder" construction method "subscribeTopic", the subscription topic configuration into the Request object, subscription topic support wildcard.
 
 ```java
 // 1.Construct the request object of the subscription message, mainly the subject of the feedback
 Request request = new Request.Builder()
         // Subscribed topics
-        .backTopic(topic)
+        .subscribeTopic(topic)
         .build();
 
 // 2.Get Observable through the configured client class
@@ -127,7 +127,7 @@ For example, if the alarm subject is 「sheedon/data/alarm」 and the MQTT messa
 // 1.Construct the request object of the subscription message, mainly the subject of the feedback
 Request request = new Request.Builder()
         // Subscribed topics
-        .backTopic("sheedon/data/alarm")
+        .subscribeTopic("sheedon/data/alarm")
         // subscribed keywords
         .keyword("lamp")
         .build();
@@ -164,7 +164,7 @@ Request request = new Request.Builder()
         // mqtt message payload
         .data(message)
         // Subscribed topics
-        .backTopic(topicStr)
+        .subscribeTopic(topicStr)
         // subscribed keywords
         .keyword(keywordStr)
         .build();

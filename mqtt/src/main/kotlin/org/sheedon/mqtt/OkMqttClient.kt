@@ -63,7 +63,7 @@ import org.sheedon.rr.timeout.android.TimeOutHandler
  *     .build();
  *
  * Request request = new Request.Builder()
- *     .backTopic("get_manager_list")
+ *     .subscribeTopic("get_manager_list")
  *     .topic("classify/device/recyclable/data/test")
  *     .data(message)
  *     .build();
