@@ -38,7 +38,7 @@ allprojects {
 
 ```groovy
 dependencies {
-    implementation 'com.github.Sheedon:okmqtt:2.1.0-alpha-1'
+    implementation 'com.github.Sheedon:okmqtt:2.1.0-alpha-2.1'
 }
 ```
 
