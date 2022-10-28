@@ -261,7 +261,12 @@ class MqttWrapperClient private constructor(
                 topic.add(value.topic)
                 qos.add(value.qos)
             }
-            mqttClient.subscribe(topic.toTypedArray(), qos.toIntArray())
+
+            try {
+                mqttClient.subscribe(topic.toTypedArray(), qos.toIntArray())
+            } catch (e: Exception) {
+                Logger.error("failure action", e)
+            }
         }
 
         /**
@@ -394,7 +399,13 @@ class MqttWrapperClient private constructor(
         }
         startConnect = true
         val realListener = createConnectListener(listener, IActionListener.ACTION.CONNECT)
-        mqttClient.connect(connectOptions, realListener)
+        try {
+            mqttClient.connect(connectOptions, realListener)
+        } catch (e: MqttException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.error("failure action", e)
+        }
     }
 
     /**
@@ -448,7 +459,13 @@ class MqttWrapperClient private constructor(
         }
         startDisconnect = false
         val realListener = createConnectListener(listener, IActionListener.ACTION.DISCONNECT)
-        mqttClient.disconnect(connectOptions, realListener)
+        try {
+            mqttClient.disconnect(connectOptions, realListener)
+        } catch (e: MqttException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.error("failure action", e)
+        }
         Logger.info("disconnect")
     }
 
@@ -542,7 +559,13 @@ class MqttWrapperClient private constructor(
         body: Topics,
         listener: IMqttActionListener? = null
     ) {
-        mqttClient.subscribe(body.topic, body.qos, null, SubscribeListener(listener))
+        try {
+            mqttClient.subscribe(body.topic, body.qos, null, SubscribeListener(listener))
+        } catch (e: MqttException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.error("failure action", e)
+        }
     }
 
     /**
@@ -606,12 +629,20 @@ class MqttWrapperClient private constructor(
         qosArray: Collection<Int>,
         listener: IMqttActionListener? = null
     ) {
-        mqttClient.subscribe(
-            topicArray.toTypedArray(),
-            qosArray.toIntArray(),
-            null,
-            SubscribeListener(listener)
-        )
+        try {
+            mqttClient.subscribe(
+                topicArray.toTypedArray(),
+                qosArray.toIntArray(),
+                null,
+                SubscribeListener(listener)
+            )
+        } catch (e: MqttException) {
+            throw e
+        } catch (e: IllegalArgumentException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.error("failure action", e)
+        }
     }
 
     /**
@@ -690,7 +721,13 @@ class MqttWrapperClient private constructor(
         body: Topics,
         listener: IMqttActionListener? = null
     ) {
-        mqttClient.unsubscribe(body.topic, null, UnSubscribeListener(listener))
+        try {
+            mqttClient.unsubscribe(body.topic, null, UnSubscribeListener(listener))
+        } catch (e: MqttException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.error("failure action", e)
+        }
     }
 
     /**
@@ -756,7 +793,13 @@ class MqttWrapperClient private constructor(
         topics: Collection<String>,
         listener: IMqttActionListener? = null
     ) {
-        mqttClient.unsubscribe(topics.toTypedArray(), null, UnSubscribeListener(listener))
+        try {
+            mqttClient.unsubscribe(topics.toTypedArray(), null, UnSubscribeListener(listener))
+        } catch (e: MqttException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.error("failure action", e)
+        }
     }
 
     /**
@@ -876,7 +919,12 @@ class MqttWrapperClient private constructor(
      * @see [mqttClient.publish]
      */
     fun publish(topic: String, message: MqttMessage): IMqttDeliveryToken {
-        return mqttClient.publish(topic, message)
+        try {
+            return mqttClient.publish(topic, message)
+        } catch (e: Exception) {
+            Logger.error("failure action", e)
+        }
+        return MqttDeliveryToken()
     }
 
     class Builder internal constructor() {
