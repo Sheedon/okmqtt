@@ -212,7 +212,7 @@ class MqttWrapperClient private constructor(
          *
          * @param cause the reason behind the loss of connection.
          */
-        override fun connectionLost(cause: Throwable) {
+        override fun connectionLost(cause: Throwable?) {
             this.onFailure(IActionListener.ACTION.CONNECT, cause)
         }
 
