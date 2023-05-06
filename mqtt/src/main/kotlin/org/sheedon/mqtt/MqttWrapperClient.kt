@@ -79,6 +79,9 @@ class MqttWrapperClient private constructor(
     // Auto reConnect mqtt service
     private val autoReconnect: Boolean = builder.connectOptions!!.isAutomaticReconnect
 
+    // need reConnect mqtt service
+    private var needReconnect: Boolean = true
+
     // subscribe mqtt topic by wildcard filter
     // append default subscribeBodies to WildcardFilter
     private val wildcardFilter: WildcardFilter = WildcardFilter(
@@ -239,7 +242,7 @@ class MqttWrapperClient private constructor(
          * Only when autoReconnect == true can the reconnect action be started
          */
         private fun autoReconnect() {
-            if (autoReconnect) {
+            if (autoReconnect && needReconnect) {
                 handler?.sendEmptyMessageDelayed(MESSAGE_WHAT, AUTO_RECONNECT_INTERVAL)
             }
         }
@@ -397,6 +400,7 @@ class MqttWrapperClient private constructor(
                 return
             }
         }
+        needReconnect = true
         startConnect = true
         val realListener = createConnectListener(listener, IActionListener.ACTION.CONNECT)
         try {
@@ -420,9 +424,9 @@ class MqttWrapperClient private constructor(
      * @see [disconnect]
      */
     @JvmOverloads
-    fun disConnect(listener: IMqttActionListener? = null) {
+    fun disConnect(listener: IMqttActionListener? = null, needCheckDisconnectTime: Boolean = true) {
         val nowTime = System.currentTimeMillis()
-        if (nowTime - lastDisconnectTime < EXECUTE_INTERVAL) {
+        if (needCheckDisconnectTime && nowTime - lastDisconnectTime < EXECUTE_INTERVAL) {
             startDisconnect = false
             val throwable = Throwable("Only disconnect once within 5 seconds")
             failureAction(listener, connectListener, IActionListener.ACTION.DISCONNECT, throwable)
@@ -451,6 +455,7 @@ class MqttWrapperClient private constructor(
      */
     @Throws(MqttException::class)
     private fun disconnect(listener: IMqttActionListener? = null) {
+        needReconnect = false
         synchronized(lock) {
             if (!mqttClient.isConnected && startDisconnect) {
                 Logger.error("disconnect isConnected = $mqttClient.isConnected, isStartDisconnect = $startDisconnect")

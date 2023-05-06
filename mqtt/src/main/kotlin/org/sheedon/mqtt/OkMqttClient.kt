@@ -191,8 +191,8 @@ class OkMqttClient internal constructor(
     }
 
     @JvmOverloads
-    fun disConnect(listener: IMqttActionListener? = null) {
-        this.mqttClient.disConnect(listener)
+    fun disConnect(listener: IMqttActionListener? = null, needCheckDisconnectTime: Boolean = true) {
+        this.mqttClient.disConnect(listener, needCheckDisconnectTime)
     }
 
 
